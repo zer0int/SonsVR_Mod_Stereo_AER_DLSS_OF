@@ -22,3 +22,9 @@ obj/
 # Assistant instructions, local only
 CLAUDE.md
 .claude/
+
+# Installable package and the script that builds it: assembled from a local game
+# install, 111 MB of MelonLoader, and rebuilt rather than versioned. Ships as a zip
+# attached to the release instead.
+dist/
+tools/

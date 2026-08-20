@@ -1,4 +1,7 @@
+﻿using System;
+using System.Collections.Generic;
 using MelonLoader;
+using UnityEngine;
 
 namespace SonsVRMod
 {
@@ -47,7 +50,7 @@ namespace SonsVRMod
         /// and this gets turned on once everything else is known to hold.
         /// </para>
         /// </summary>
-        public static bool DesktopMirror = false;
+        public static bool DesktopMirror = true;
 
         /// <summary>
         /// Eye height in metres to use instead of the measured one. Zero measures it from the headset.
@@ -154,13 +157,65 @@ namespace SonsVRMod
         /// Size multiplier for the inventory pointer. A cursor drawn for a monitor is only a few
         /// pixels across on a panel viewed from a metre away.
         /// </summary>
-        public static float InventoryCursorScale = 3.0f;
+        public static float InventoryCursorScale = 1.0f;
 
         /// <summary>
         /// Distance in metres of the inventory interface panel from the head. A world space canvas is
         /// depth tested against the scene, so anything closer than this hides it.
         /// </summary>
-        public static float InventoryCanvasDistance = 0.3f;
+        public static float InventoryCanvasDistance = 0.57f;
+
+        /// <summary>
+        /// Height in metres of the heads up display panel.
+        /// <para>
+        /// Together with the distance this decides how wide an angle the display covers. Too large or
+        /// too near and the things anchored to its corners, the compass and the map among them, fall
+        /// outside what the lenses show.
+        /// </para>
+        /// </summary>
+        public static float HudSize = 0.47f;
+
+        /// <summary>
+        /// The display size the interface positions were tuned at.
+        /// <para>
+        /// A canvas grows about its own origin, and the map and its ring hang at different offsets
+        /// from theirs, so changing the size slid them apart. The placement code keeps each piece
+        /// still by cancelling the movement its own size change would cause, and that cancellation
+        /// has to be measured from somewhere: this is that reference. At this size nothing is
+        /// cancelled and the hand tuned offsets apply exactly as they were set.
+        /// </para>
+        /// </summary>
+        public const float HudReferenceSize = 0.35f;
+
+        /// <summary>
+        /// Where the whole display sits relative to straight ahead, in metres. Positive is right.
+        /// <para>
+        /// Applied to the point everything on the display is placed from, so the map, the ring and
+        /// the messages all move together and keep the arrangement they were given.
+        /// </para>
+        /// </summary>
+        public static float HudOffsetX = 0.078f;
+
+        /// <summary>Where the whole display sits vertically, in metres. Positive is up.</summary>
+        public static float HudOffsetY = -0.054f;
+
+        /// <summary>
+        /// Where the map sits relative to the middle of the display, in metres. Positive is right.
+        /// <para>
+        /// The map and the ring drawn around it are on separate canvases, and only the map is
+        /// placed by this mod: the ring rides wherever the main display lands. So the two are lined
+        /// up by these two numbers and nothing else.
+        /// </para>
+        /// <para>
+        /// Left in the file rather than put on the panel. This is the alignment of one piece
+        /// against another, set once and then correct; moving the display about is a different job,
+        /// done by HudOffsetX and HudOffsetY.
+        /// </para>
+        /// </summary>
+        public static float MiniMapOffsetX = 0.335f;
+
+        /// <summary>Where the map sits vertically, in metres. Positive is up. See the sideways one.</summary>
+        public static float MiniMapOffsetY = -0.21f;
 
         /// <summary>Whether the eye cameras keep their HDRP temporal history between frames.</summary>
         public static bool KeepTemporalHistory = false;
@@ -190,10 +245,10 @@ namespace SonsVRMod
         /// tangent sliders in Virtual Desktop.
         /// </para>
         /// </summary>
-        public static float FovTangentHorizontal = 1.0f;
+        public static float FovTangentHorizontal = 0.90f;
 
         /// <summary>Fraction of the vertical field of view to render. See <see cref="FovTangentHorizontal"/>.</summary>
-        public static float FovTangentVertical = 1.0f;
+        public static float FovTangentVertical = 0.86f;
 
         /// <summary>Move the flat menus onto a panel in the world so they can be seen in a headset.</summary>
         public static bool MenuInWorldSpace = true;
@@ -205,14 +260,14 @@ namespace SonsVRMod
         public static bool MenuUiToolkit = true;
 
         /// <summary>Distance in metres the menu panel sits in front of the player.</summary>
-        public static float MenuDistance = 1.32f;
+        public static float MenuDistance = 1.2f;
 
         /// <summary>
         /// Metres to raise the viewpoint, and the menu panel with it, while the game owns the camera.
         /// The cameras the menus and cutscenes use sit low enough to put the viewpoint inside the
         /// scenery, which is both uncomfortable and in the way of the panel.
         /// </summary>
-        public static float MenuHeightOffset = 0.5f;
+        public static float MenuHeightOffset = 0.65f;
 
         /// <summary>Height in metres of the menu panel.</summary>
         public static float MenuHeight = 1.0f;
@@ -221,7 +276,7 @@ namespace SonsVRMod
         /// Metres to raise or lower the menu panel, independently of the viewpoint. Negative brings
         /// it down. Use this to place the panel; use MenuHeightOffset to place the camera.
         /// </summary>
-        public static float MenuPanelVerticalOffset = 0f;
+        public static float MenuPanelVerticalOffset = 1.2f;
 
         /// <summary>Cursor speed across the panel, in canvas units per second.</summary>
         public static float MenuCursorSpeed = 900f;
@@ -229,11 +284,155 @@ namespace SonsVRMod
         /// <summary>Size of the cursor marker, in canvas units.</summary>
         public static float MenuCursorSize = 24f;
 
+        /// <summary>Height in metres of the mod's settings panel.</summary>
+        public static float SettingsPanelHeight = 1.4f;
+
+        /// <summary>Distance in metres the settings panel sits in front of the player.</summary>
+        public static float SettingsPanelDistance = 1.6f;
+
+        /// <summary>
+        /// Hide the character while the settings panel is open, arms and held items included. The
+        /// beam otherwise emerges from the back of a hand that is in the way of the panel.
+        /// </summary>
+        public static bool HidePlayerInSettings = true;
+
+        /// <summary>
+        /// Show the loading screen on a panel in the world.
+        /// <para>
+        /// Without it the view simply stops while a scene loads: the last frame stays frozen in the
+        /// headset, and whatever the camera was pointing at when the world was torn down stays there
+        /// too, which can be the inside of nothing at all.
+        /// </para>
+        /// </summary>
+        public static bool LoadingScreenInVR = true;
+
         /// <summary>How many frames get detailed enter/exit tracing at startup.</summary>
         public static int TraceFrames = 5;
 
         /// <summary>Measure and report how much of the frame this mod costs.</summary>
         public static bool Profile = true;
+
+        /// <summary>
+        /// Survey the player's skeleton, animators and existing inverse kinematics once, as
+        /// groundwork for driving the arms from the controllers.
+        /// </summary>
+        /// <summary>Write the interface layout to the log once, to work out where its pieces hang.</summary>
+        public static bool LogInterfaceLayout = false;
+
+        public static bool LogArmSkeleton = true;
+
+        /// <summary>Degrees turned by one flick of the stick.</summary>
+        public static float SnapTurnAngle = 30f;
+
+        /// <summary>
+        /// Turn continuously with the stick instead of in fixed steps.
+        /// <para>
+        /// Which of the two is comfortable is a matter of the person, not of the game: continuous
+        /// turning moves the world while the head is still, which some people read as motion and
+        /// others do not notice at all. Hence a switch rather than a decision.
+        /// </para>
+        /// </summary>
+        public static bool SmoothTurn = false;
+
+        /// <summary>Degrees per second while turning continuously.</summary>
+        public static float SmoothTurnSpeed = 90f;
+
+        /// <summary>Metres the viewpoint sits to the right of where the game hangs its camera.</summary>
+        public static float PlayerOffsetX = 0f;
+
+        /// <summary>Metres the viewpoint sits forward of where the game hangs its camera.</summary>
+        public static float PlayerOffsetZ = 0f;
+
+        /// <summary>Point at panels by aiming a controller, rather than steering a cursor with a stick.</summary>
+        public static bool LaserPointer = true;
+
+        /// <summary>Aim with the left controller instead of the right.</summary>
+        public static bool LaserLeftHand = false;
+
+        /// <summary>
+        /// Degrees the beam is tilted down from the controller's own axis. A controller held
+        /// naturally points somewhat below the direction its axis runs in.
+        /// </summary>
+        public static float LaserAngle = 30f;
+
+        /// <summary>How far the beam reaches, in metres.</summary>
+        public static float LaserRange = 6f;
+
+        /// <summary>Thickness of the beam at the controller, in metres.</summary>
+        public static float LaserWidth = 0.004f;
+
+        /// <summary>Make the arms of the character follow the motion controllers.</summary>
+        public static bool HandTracking = true;
+
+        /// <summary>
+        /// Metres to raise the viewpoint during gameplay, above the point the camera hangs from.
+        /// <para>
+        /// That point sits where the game attaches its camera, which is around the neck rather than
+        /// between the eyes. On a flat screen nothing shows it; with the body and arms visible in a
+        /// headset the difference reads as looking out from shoulder height.
+        /// </para>
+        /// </summary>
+        public static float PlayerEyeHeightOffset = 0.19f;
+
+        /// <summary>
+        /// How strongly the controllers override the animation, from 0 to 1. Below one the arms blend
+        /// between where the animation puts them and where the controller is, which is a way to keep
+        /// some of the game's own posing while still following the hands.
+        /// </summary>
+        public static float HandIKWeight = 1.0f;
+
+        /// <summary>
+        /// Rotation in degrees that turns a controller pose into a hand pose, for the left hand.
+        /// <para>
+        /// A controller reports the pose of the device, not of a hand: which way the palm and fingers
+        /// face relative to it is a decision this game's rig made, and every skeleton makes it
+        /// differently. It was found by looking at the result, so it is fixed here rather than
+        /// offered as a setting: it belongs to the game, not to the player.
+        /// </para>
+        /// <para>
+        /// The 180 is the mirror between the two hands. The rest is the tilt measured in the headset,
+        /// with the arms held out and the palms turned inward.
+        /// </para>
+        /// </summary>
+        public static readonly Vector3 HandBaseRotationLeft = new Vector3(140f, 0f, 0f);
+
+        /// <summary>The same correction for the right hand, without the mirror.</summary>
+        public static readonly Vector3 HandBaseRotationRight = new Vector3(-40f, 0f, 0f);
+
+        /// <summary>
+        /// Adjustment of the left hand in degrees, on top of the fixed correction above.
+        /// <para>
+        /// Kept apart from that correction so zero means correct. What is left to adjust here is how
+        /// the player holds the controller, which differs between people and between grips, and that
+        /// is the part worth a slider. Pitch tips the palm, yaw swings it sideways, roll twists it.
+        /// </para>
+        /// </summary>
+        public static Vector3 HandRotationOffsetLeft = Vector3.zero;
+
+        /// <summary>Adjustment of the right hand in degrees. See the left one.</summary>
+        public static Vector3 HandRotationOffsetRight = Vector3.zero;
+
+        /// <summary>
+        /// How strongly the elbows are held in a natural position, from 0 to 1.
+        /// <para>
+        /// The hand pose alone does not fix the arm: the elbow can sit anywhere on a circle around
+        /// the line from shoulder to hand. At zero the solver chooses, which tends to fold the elbows
+        /// into the body; at one they are kept where a real elbow would be.
+        /// </para>
+        /// </summary>
+        public static float ElbowBendWeight = 1.0f;
+
+        /// <summary>
+        /// Metres the elbow goal sits out to the side of the shoulder. This is the value that makes
+        /// the arms open outwards rather than fold across the chest.
+        /// </summary>
+        public static float ElbowOutward = 0.45f;
+
+        /// <summary>Metres the elbow goal sits behind the shoulder.</summary>
+        public static float ElbowBack = 0.15f;
+
+        /// <summary>Metres the elbow goal sits below the shoulder.</summary>
+        public static float ElbowDown = 0.25f;
 
         /// <summary>
         /// Tell the compositor explicitly that the frame has been handed over, right after submitting.
@@ -264,6 +463,173 @@ namespace SonsVRMod
         /// off by default: measure whether it buys enough to be worth the fog going flat.
         /// </summary>
         public static bool EyeDisableVolumetrics = false;
+
+        /// <summary>
+        /// One setting the player can move from inside the headset.
+        /// <para>
+        /// Carries the reading and writing of the value together with the means to persist it, so a
+        /// panel can offer a setting without knowing anything about how it is stored.
+        /// </para>
+        /// </summary>
+        internal sealed class Adjustable
+        {
+            public string Category;
+
+            /// <summary>Which column of the settings panel this setting is shown in.</summary>
+            public int Column;
+
+            public string Label;
+            public float Min;
+            public float Max;
+            public bool IsToggle;
+            public Func<float> Read;
+            public Action<float> Write;
+            public Action Persist;
+        }
+
+        /// <summary>The settings worth adjusting while wearing the headset, in the order shown.</summary>
+        internal static readonly List<Adjustable> Adjustables = new List<Adjustable>();
+
+        /// <summary>The group the next registered settings belong to.</summary>
+        private static string _group = "";
+
+        /// <summary>The panel column the next registered settings belong to.</summary>
+        private static int _column;
+
+        private static void Register(string label, float min, float max, Func<float> read, Action<float> write,
+            MelonPreferences_Entry<float> entry)
+        {
+            Adjustables.Add(new Adjustable
+            {
+                Category = _group,
+                Column = _column,
+                Label = label,
+                Min = min,
+                Max = max,
+                IsToggle = false,
+                Read = read,
+                Write = write,
+                Persist = () => entry.Value = read()
+            });
+        }
+
+        private static void RegisterToggle(string label, Func<bool> read, Action<bool> write,
+            MelonPreferences_Entry<bool> entry)
+        {
+            Adjustables.Add(new Adjustable
+            {
+                Category = _group,
+                Column = _column,
+                Label = label,
+                Min = 0f,
+                Max = 1f,
+                IsToggle = true,
+                Read = () => read() ? 1f : 0f,
+                Write = v => write(v >= 0.5f),
+                Persist = () => entry.Value = read()
+            });
+        }
+
+        /// <summary>
+        /// The settings offered in the headset: the ones whose effect can be judged by looking at it
+        /// while it changes. Everything else stays in the file, where it belongs.
+        /// </summary>
+        private static void BuildAdjustables(MelonPreferences_Category category)
+        {
+            Adjustables.Clear();
+
+            // Which column of the panel each group lands in, decided here rather than worked out by
+            // the panel. Balancing the two halves by height is easy and wrong: it puts groups where
+            // they fit rather than where they are looked for, and the placement then shifts every
+            // time a setting is added. Arms is long enough to hold a column on its own.
+            _column = 0;
+
+            _group = "View";
+            Register("Render scale", 0.4f, 1.2f, () => RenderScale, v => RenderScale = v,
+                category.GetEntry<float>("RenderScale"));
+            Register("Field of view, width", 0.6f, 1.0f, () => FovTangentHorizontal,
+                v => FovTangentHorizontal = v, category.GetEntry<float>("FovTangentHorizontal"));
+            Register("Field of view, height", 0.6f, 1.0f, () => FovTangentVertical,
+                v => FovTangentVertical = v, category.GetEntry<float>("FovTangentVertical"));
+
+            _group = "Viewpoint";
+            Register("Height", -0.2f, 0.5f, () => PlayerEyeHeightOffset,
+                v => PlayerEyeHeightOffset = v, category.GetEntry<float>("PlayerEyeHeightOffset"));
+            Register("Sideways", -0.5f, 0.5f, () => PlayerOffsetX, v => PlayerOffsetX = v,
+                category.GetEntry<float>("PlayerOffsetX"));
+            Register("Forward", -0.5f, 0.5f, () => PlayerOffsetZ, v => PlayerOffsetZ = v,
+                category.GetEntry<float>("PlayerOffsetZ"));
+            Register("Head movement range", 0f, 0.8f, () => PositionalTrackingRange,
+                v => PositionalTrackingRange = v, category.GetEntry<float>("PositionalTrackingRange"));
+
+            _group = "Turning";
+            RegisterToggle("Smooth turning", () => SmoothTurn, v => SmoothTurn = v,
+                category.GetEntry<bool>("SmoothTurn"));
+            Register("Snap angle, degrees", 15f, 90f, () => SnapTurnAngle,
+                v => SnapTurnAngle = v, category.GetEntry<float>("SnapTurnAngle"));
+            Register("Smooth speed, degrees a second", 30f, 240f, () => SmoothTurnSpeed,
+                v => SmoothTurnSpeed = v, category.GetEntry<float>("SmoothTurnSpeed"));
+            RegisterToggle("Turn body while standing still", () => BodyFollowsHeadWhileStill,
+                v => BodyFollowsHeadWhileStill = v, category.GetEntry<bool>("BodyFollowsHeadWhileStill"));
+
+            _column = 1;
+
+            _group = "Arms";
+            RegisterToggle("Follow the controllers", () => HandTracking, v => HandTracking = v,
+                category.GetEntry<bool>("HandTracking"));
+            Register("Strength", 0f, 1f, () => HandIKWeight, v => HandIKWeight = v,
+                category.GetEntry<float>("HandIKWeight"));
+            Register("Left hand pitch, degrees", -45f, 45f, () => HandRotationOffsetLeft.x,
+                v => HandRotationOffsetLeft.x = v, category.GetEntry<float>("HandAdjustLeftPitch"));
+            Register("Left hand yaw, degrees", -45f, 45f, () => HandRotationOffsetLeft.y,
+                v => HandRotationOffsetLeft.y = v, category.GetEntry<float>("HandAdjustLeftYaw"));
+            Register("Left hand roll, degrees", -45f, 45f, () => HandRotationOffsetLeft.z,
+                v => HandRotationOffsetLeft.z = v, category.GetEntry<float>("HandAdjustLeftRoll"));
+            Register("Right hand pitch, degrees", -45f, 45f, () => HandRotationOffsetRight.x,
+                v => HandRotationOffsetRight.x = v, category.GetEntry<float>("HandAdjustRightPitch"));
+            Register("Right hand yaw, degrees", -45f, 45f, () => HandRotationOffsetRight.y,
+                v => HandRotationOffsetRight.y = v, category.GetEntry<float>("HandAdjustRightYaw"));
+            Register("Right hand roll, degrees", -45f, 45f, () => HandRotationOffsetRight.z,
+                v => HandRotationOffsetRight.z = v, category.GetEntry<float>("HandAdjustRightRoll"));
+            Register("Elbows outward", 0.1f, 0.8f, () => ElbowOutward, v => ElbowOutward = v,
+                category.GetEntry<float>("ElbowOutward"));
+            Register("Elbows down", 0f, 0.6f, () => ElbowDown, v => ElbowDown = v,
+                category.GetEntry<float>("ElbowDown"));
+
+            _group = "Interface";
+            Register("Display distance", 0.3f, 1.2f, () => InventoryCanvasDistance,
+                v => InventoryCanvasDistance = v, category.GetEntry<float>("InventoryCanvasDistance"));
+            Register("Display size", 0.15f, 0.8f, () => HudSize, v => HudSize = v,
+                category.GetEntry<float>("HudSize"));
+            Register("Menu distance", 0.6f, 2.5f, () => MenuDistance, v => MenuDistance = v,
+                category.GetEntry<float>("MenuDistance"));
+            Register("Inventory pointer size", 1f, 8f, () => InventoryCursorScale,
+                v => InventoryCursorScale = v, category.GetEntry<float>("InventoryCursorScale"));
+            Register("Display sideways", -0.6f, 0.6f, () => HudOffsetX,
+                v => HudOffsetX = v, category.GetEntry<float>("HudOffsetX"));
+            Register("Display height", -0.6f, 0.6f, () => HudOffsetY,
+                v => HudOffsetY = v, category.GetEntry<float>("HudOffsetY"));
+
+            _column = 0;
+
+            _group = "Performance";
+            RegisterToggle("Desktop shows an eye", () => DesktopMirror, v => DesktopMirror = v,
+                category.GetEntry<bool>("DesktopMirror"));
+            RegisterToggle("Camera effects off", () => EyeDisableCameraEffects,
+                v => EyeDisableCameraEffects = v, category.GetEntry<bool>("EyeDisableCameraEffects"));
+            RegisterToggle("Screen space effects off", () => EyeDisableScreenSpaceEffects,
+                v => EyeDisableScreenSpaceEffects = v, category.GetEntry<bool>("EyeDisableScreenSpaceEffects"));
+        }
+
+        /// <summary>Writes every adjusted value back to the preferences file.</summary>
+        public static void Save()
+        {
+            foreach (var adjustable in Adjustables)
+                adjustable.Persist?.Invoke();
+
+            MelonPreferences.Save();
+            MelonLogger.Msg($"[VRConfig] {Adjustables.Count} settings saved");
+        }
 
         private static bool _loaded;
 
@@ -339,7 +705,22 @@ namespace SonsVRMod
                     description: "Size multiplier for the inventory pointer.").Value;
 
                 InventoryCanvasDistance = category.CreateEntry("InventoryCanvasDistance", InventoryCanvasDistance,
-                    description: "Distance in metres of the inventory interface from the head. Closer clears nearby objects.").Value;
+                    description: "Distance in metres of the interface panel from the head.").Value;
+
+                HudOffsetX = category.CreateEntry("HudOffsetX", HudOffsetX,
+                    description: "Metres the whole display sits to the right of straight ahead.").Value;
+
+                HudOffsetY = category.CreateEntry("HudOffsetY", HudOffsetY,
+                    description: "Metres the whole display sits above straight ahead. Negative is below.").Value;
+
+                MiniMapOffsetX = category.CreateEntry("MiniMapOffsetX", MiniMapOffsetX,
+                    description: "Metres the map sits to the right of the middle of the display.").Value;
+
+                MiniMapOffsetY = category.CreateEntry("MiniMapOffsetY", MiniMapOffsetY,
+                    description: "Metres the map sits above the middle of the display. Negative is below.").Value;
+
+                HudSize = category.CreateEntry("HudSize", HudSize,
+                    description: "Height in metres of the heads up display panel.").Value;
 
                 InventoryProbeRadius = category.CreateEntry("InventoryProbeRadius", InventoryProbeRadius,
                     description: "Radius in metres over which the ground under the inventory is sampled.").Value;
@@ -383,6 +764,18 @@ namespace SonsVRMod
                 MenuCursorSize = category.CreateEntry("MenuCursorSize", MenuCursorSize,
                     description: "Size of the menu cursor marker, in canvas units.").Value;
 
+                SettingsPanelHeight = category.CreateEntry("SettingsPanelHeight", SettingsPanelHeight,
+                    description: "Height in metres of the mod's settings panel.").Value;
+
+                SettingsPanelDistance = category.CreateEntry("SettingsPanelDistance", SettingsPanelDistance,
+                    description: "Distance in metres the settings panel sits in front of the player.").Value;
+
+                HidePlayerInSettings = category.CreateEntry("HidePlayerInSettings", HidePlayerInSettings,
+                    description: "Hide the character while the settings panel is open.").Value;
+
+                LoadingScreenInVR = category.CreateEntry("LoadingScreenInVR", LoadingScreenInVR,
+                    description: "Show the loading screen on a panel in the world instead of freezing the view.").Value;
+
                 EyeDisableCameraEffects = category.CreateEntry("EyeDisableCameraEffects", EyeDisableCameraEffects,
                     description: "Turn off motion blur, depth of field and distortion on the eye cameras.").Value;
 
@@ -395,11 +788,85 @@ namespace SonsVRMod
                 PostPresentHandoff = category.CreateEntry("PostPresentHandoff", PostPresentHandoff,
                     description: "Hand the frame over to the compositor explicitly after submitting, to avoid both sides waiting.").Value;
 
+                SnapTurnAngle = category.CreateEntry("SnapTurnAngle", SnapTurnAngle,
+                    description: "Degrees turned by one flick of the stick.").Value;
+
+                SmoothTurn = category.CreateEntry("SmoothTurn", SmoothTurn,
+                    description: "Turn continuously with the stick instead of in fixed steps.").Value;
+
+                SmoothTurnSpeed = category.CreateEntry("SmoothTurnSpeed", SmoothTurnSpeed,
+                    description: "Degrees per second while turning continuously.").Value;
+
+                PlayerOffsetX = category.CreateEntry("PlayerOffsetX", PlayerOffsetX,
+                    description: "Metres the viewpoint sits to the right of the game's camera point.").Value;
+
+                PlayerOffsetZ = category.CreateEntry("PlayerOffsetZ", PlayerOffsetZ,
+                    description: "Metres the viewpoint sits forward of the game's camera point.").Value;
+
+                LaserPointer = category.CreateEntry("LaserPointer", LaserPointer,
+                    description: "Point at panels by aiming a controller.").Value;
+
+                LaserLeftHand = category.CreateEntry("LaserLeftHand", LaserLeftHand,
+                    description: "Aim with the left controller instead of the right.").Value;
+
+                LaserAngle = category.CreateEntry("LaserAngle", LaserAngle,
+                    description: "Degrees the beam is tilted down from the controller axis.").Value;
+
+                LaserRange = category.CreateEntry("LaserRange", LaserRange,
+                    description: "How far the beam reaches, in metres.").Value;
+
+                LaserWidth = category.CreateEntry("LaserWidth", LaserWidth,
+                    description: "Thickness of the beam at the controller, in metres.").Value;
+
+                HandTracking = category.CreateEntry("HandTracking", HandTracking,
+                    description: "Make the arms of the character follow the motion controllers.").Value;
+
+                ElbowBendWeight = category.CreateEntry("ElbowBendWeight", ElbowBendWeight,
+                    description: "How strongly the elbows are held in a natural position, 0 to 1.").Value;
+
+                ElbowOutward = category.CreateEntry("ElbowOutward", ElbowOutward,
+                    description: "Metres the elbow sits out to the side of the shoulder. Raise if the arms fold inwards.").Value;
+
+                ElbowBack = category.CreateEntry("ElbowBack", ElbowBack,
+                    description: "Metres the elbow sits behind the shoulder.").Value;
+
+                ElbowDown = category.CreateEntry("ElbowDown", ElbowDown,
+                    description: "Metres the elbow sits below the shoulder.").Value;
+
+                PlayerEyeHeightOffset = category.CreateEntry("PlayerEyeHeightOffset", PlayerEyeHeightOffset,
+                    description: "Metres to raise the viewpoint during gameplay: the game hangs its camera nearer the neck than the eyes.").Value;
+
+                HandIKWeight = category.CreateEntry("HandIKWeight", HandIKWeight,
+                    description: "How strongly the controllers override the animation, 0 to 1.").Value;
+
+                // Read as three numbers each: MelonPreferences handles vectors poorly, and three
+                // named angles are easier to adjust by hand than a serialised structure. These are
+                // adjustments on top of HandBaseRotation*, so zero is correct and the numbers stay
+                // small. The keys were renamed when the fixed part moved into code, so that a file
+                // holding the old absolute angles is ignored rather than added twice.
+                HandRotationOffsetLeft = new Vector3(
+                    category.CreateEntry("HandAdjustLeftPitch", 0f, description: "Left hand pitch adjustment, degrees. Tips the palm up or down.").Value,
+                    category.CreateEntry("HandAdjustLeftYaw", 0f, description: "Left hand yaw adjustment, degrees. Swings the palm sideways.").Value,
+                    category.CreateEntry("HandAdjustLeftRoll", 0f, description: "Left hand roll adjustment, degrees. Twists the palm.").Value);
+
+                HandRotationOffsetRight = new Vector3(
+                    category.CreateEntry("HandAdjustRightPitch", 0f, description: "Right hand pitch adjustment, degrees. Tips the palm up or down.").Value,
+                    category.CreateEntry("HandAdjustRightYaw", 0f, description: "Right hand yaw adjustment, degrees. Swings the palm sideways.").Value,
+                    category.CreateEntry("HandAdjustRightRoll", 0f, description: "Right hand roll adjustment, degrees. Twists the palm.").Value);
+
+                LogInterfaceLayout = category.CreateEntry("LogInterfaceLayout", LogInterfaceLayout,
+                    description: "Write the heads up display layout to the log once. Large, and only useful when its pieces move apart.").Value;
+
+                LogArmSkeleton = category.CreateEntry("LogArmSkeleton", LogArmSkeleton,
+                    description: "Survey the player skeleton, animators and existing inverse kinematics once.").Value;
+
                 Profile = category.CreateEntry("Profile", Profile,
                     description: "Measure and report how much main thread time this mod costs per frame.").Value;
 
                 TraceFrames = category.CreateEntry("TraceFrames", TraceFrames,
                     description: "How many startup frames get detailed enter/exit tracing in the log.").Value;
+
+                BuildAdjustables(category);
 
                 // Applied after every entry has been read, so the master switch wins over the
                 // individual ones rather than being overwritten by them.

@@ -51,6 +51,14 @@ namespace SonsVRMod
         public static bool PlayerHasControl { get; private set; }
 
         /// <summary>
+        /// The rig root and the neutral head pose, exposed so anything mapping a tracked device into
+        /// the world goes through the same transform the head does, rather than repeating it.
+        /// </summary>
+        public static Transform RigOrigin { get; private set; }
+
+        public static Vector3 HeadNeutral { get; private set; }
+
+        /// <summary>
         /// Root transform of the VR coordinate system (world anchor for the player).
         /// This is moved to match the game's FPS camera position.
         /// </summary>
@@ -272,6 +280,15 @@ namespace SonsVRMod
         /// <summary>Turns the flat menus into a panel in the world and points at them.</summary>
         private readonly VRMenu _vrMenu = new VRMenu();
 
+        /// <summary>Drives the arms of the character from the motion controllers.</summary>
+        private readonly VRHands _vrHands = new VRHands();
+
+        /// <summary>The mod's own settings, on a panel in the room.</summary>
+        private readonly VRSettingsPanel _settingsPanel = new VRSettingsPanel();
+
+        /// <summary>Shows the loading screen in the headset instead of freezing the view.</summary>
+        private readonly VRLoadingScreen _loadingScreen = new VRLoadingScreen();
+
         /// <summary>Where the viewpoint was when a menu came up, and where it stays until it closes.</summary>
         private Vector3 _menuViewpoint;
         
@@ -446,6 +463,11 @@ namespace SonsVRMod
                 if (LocalPlayer != null)
                 {
                     firstPersonCharacter = LocalPlayer.GetComponent<Il2CppFirstPersonCharacter>();
+
+                    // Groundwork for driving the arms from the controllers: report what is there
+                    // before anything is built on assumptions about it.
+                    VRArmRecon.Run(LocalPlayer);
+                    _vrHands.Reset();
                     if (kh != null)
                     {
                         kh.LocalPlayer = LocalPlayer;
@@ -487,6 +509,9 @@ namespace SonsVRMod
 
             if (!_headNeutralCaptured)
                 CaptureHeadNeutral();
+
+            RigOrigin = Origin;
+            HeadNeutral = _headNeutral;
 
             // Face whatever the newly bound camera was facing, once. From then on the rig keeps its
             // own heading: the game is free to swing its camera around without dragging the player.
@@ -607,12 +632,19 @@ namespace SonsVRMod
 
                 // 5. Rig placement. Rotation comes only from our own yaw, position only from the
                 //    anchor, so nothing here depends on what we wrote to the camera last frame.
-                Origin.position = GetAnchorPosition() + Origin.rotation * positionOffset;
+                // The offset is in the rig's own yaw space, so sideways stays sideways as the player
+                // turns rather than swinging with the world.
+                Vector3 offset = new Vector3(VRConfig.PlayerOffsetX, 0f, VRConfig.PlayerOffsetZ) + positionOffset;
+                Origin.position = GetAnchorPosition() + Origin.rotation * offset;
             }
 
             // 5. The game camera follows the headset. Purely a write: no rig input is derived from it.
             if (UsedCamera != null)
                 UsedCamera.transform.SetPositionAndRotation(StereoRender.Head.position, StereoRender.Head.rotation);
+
+            // 6. The arms follow the controllers, mapped through the rig that has just been placed,
+            //    so hands and head are positioned from the same origin in the same frame.
+            _vrHands.Update(LocalPlayer, Origin, _headNeutral);
         }
 
         /// <summary>
@@ -649,8 +681,11 @@ namespace SonsVRMod
         /// </summary>
         private Vector3 GetAnchorPosition()
         {
+            // The extra lift is not a comfort setting: the game hangs its camera nearer the neck than
+            // the eyes, which never shows on a flat screen but reads as shoulder height once the body
+            // and arms are visible in a headset.
             if (_cameraAnchor != null)
-                return _cameraAnchor.position + Vector3.up * _anchorEyeHeight;
+                return _cameraAnchor.position + Vector3.up * (_anchorEyeHeight + VRConfig.PlayerEyeHeightOffset);
 
             if (LocalPlayer != null)
                 return LocalPlayer.transform.position + Vector3.up * fallbackEyeHeight;
@@ -665,13 +700,34 @@ namespace SonsVRMod
         /// </summary>
         private void UpdateSnapTurn()
         {
+            // The settings panel is using the sticks to point at itself.
+            if (_settingsPanel.IsOpen)
+                return;
+
             Vector2 rightStick = NativeVRInput.GetVector2("ThumbstickRight");
+
+            if (VRConfig.SmoothTurn)
+            {
+                // Continuous turning: the stick is a rate, not a trigger. Below the deadzone nothing
+                // happens, so a resting thumb cannot drift the view.
+                if (Mathf.Abs(rightStick.x) > 0.2f)
+                {
+                    _rigYaw += rightStick.x * VRConfig.SmoothTurnSpeed * Time.deltaTime;
+                    _rigYaw = Mathf.Repeat(_rigYaw, 360f);
+
+                    // The character follows a deliberate turn here too, exactly as it does for a
+                    // snap: the player asked to be turned either way.
+                    _forceBodyAlignFrames = ForceBodyAlignFrames;
+                }
+
+                return;
+            }
 
             if (Mathf.Abs(rightStick.x) > stickThreshold)
             {
                 if (snapTurnReset)
                 {
-                    _rigYaw += (rightStick.x > 0f) ? snapAngle : -snapAngle;
+                    _rigYaw += (rightStick.x > 0f) ? VRConfig.SnapTurnAngle : -VRConfig.SnapTurnAngle;
                     _rigYaw = Mathf.Repeat(_rigYaw, 360f);
                     snapTurnReset = false;
 
@@ -919,7 +975,20 @@ namespace SonsVRMod
             {
                 MelonLogger.Msg("[VRPlayer] Bound camera was destroyed, waiting for a new one");
                 PlayerHasControl = false;
-                StereoRender.SetRenderingActive(false);
+
+                // Kept rendering, in darkness, so the loading screen can be shown rather than the
+                // view stopping on the last frame of a world that is being taken apart.
+                if (VRConfig.LoadingScreenInVR)
+                {
+                    StereoRender.SetRenderingActive(true);
+                    StereoRender.SetLoadingMode(true);
+                    _loadingScreen.Begin(StereoRender.Head, StereoRender.LeftCam);
+                }
+                else
+                {
+                    StereoRender.SetRenderingActive(false);
+                }
+
                 canUpdate = false;
                 _cameraAnchor = null;
                 LocalPlayer = null;
@@ -929,11 +998,18 @@ namespace SonsVRMod
             }
 
             StereoRender.SetRenderingActive(true);
+            StereoRender.SetLoadingMode(false);
+            _loadingScreen.End();
             WatchForFalling();
 
             // Head pose, rig placement and game camera sync, all in one deterministic pass.
             // Everything below only reads the rig, it never moves it.
             UpdateVRRig(!InventoryCamIsActive);
+
+            // The mod's own settings panel, available wherever the player is: it exists to be
+            // adjusted while the effect of the change is visible.
+            _settingsPanel.Update(StereoRender.Head);
+            UpdatePlayerVisibility();
 
             if (InventoryCamIsActive != _lastInventoriCameraIsActive)
             {
@@ -1267,6 +1343,108 @@ namespace SonsVRMod
         private void OnDisable()
         {
             MelonLogger.Msg("[VRPlayer] VRPlayer DISABLED");
+        }
+
+        /// <summary>Sizes a converted interface panel to the configured height in metres.</summary>
+        private static void ApplyHudScale(Canvas canvas)
+        {
+            if (canvas == null || canvas.renderMode != RenderMode.WorldSpace)
+                return;
+
+            float pixels = Screen.height;
+            if (pixels <= 1f)
+                return;
+
+            float scale = VRConfig.HudSize / pixels;
+            if (Mathf.Abs(canvas.transform.localScale.x - scale) > 1e-6f)
+                canvas.transform.localScale = Vector3.one * scale;
+        }
+
+        /// <summary>
+        /// How far a canvas has to be moved to keep one thing on it in place as its size changes.
+        /// <para>
+        /// A canvas is positioned by its origin, but the piece the player looks at hangs some
+        /// distance from that origin, in canvas pixels. Scaling multiplies that distance, so the
+        /// piece slides away from where it was put, by a different amount on each canvas. The map
+        /// and the ring around it live on separate canvases, which is why they came apart.
+        /// </para>
+        /// <para>
+        /// The offset is taken from the piece itself rather than from the extent of everything on
+        /// the canvas. Under the map sits a four thousand pixel image scaled two hundred times,
+        /// clipped away by a mask: invisible, but it dominated any measurement of the contents and
+        /// put the horizontal offset out by hundreds of pixels while leaving the vertical roughly
+        /// right, which is exactly how the fault looked.
+        /// </para>
+        /// <para>
+        /// Only the change since the reference size is cancelled, so at that size the layout is
+        /// exactly as it was tuned by hand, and away from it each piece grows about itself.
+        /// </para>
+        /// </summary>
+        private static Vector3 HudScaleCompensation(Canvas canvas, Transform widget,
+            Quaternion rotation, ref Vector3 offset, ref bool measured)
+        {
+            if (canvas == null || widget == null)
+                return Vector3.zero;
+
+            float pixels = Screen.height;
+            if (pixels <= 1f)
+                return Vector3.zero;
+
+            if (!measured)
+            {
+                // Straight from the transform, so anchors, pivots and any nesting in between are
+                // already accounted for: whatever the layout does, this is where the thing ended up.
+                offset = canvas.transform.InverseTransformPoint(widget.position);
+                offset.z = 0f;
+                measured = true;
+
+                MelonLogger.Msg($"[VRPlayer] '{widget.name}' hangs at {offset.x:F0}, {offset.y:F0} " +
+                                $"pixels from the origin of '{canvas.name}'");
+            }
+
+            float scale = VRConfig.HudSize / pixels;
+            float reference = VRConfig.HudReferenceSize / pixels;
+
+            return rotation * (offset * (scale - reference));
+        }
+
+        private Vector3 _hudContentCentre;
+        private bool _hudContentMeasured;
+        private Vector3 _miniMapContentCentre;
+        private bool _miniMapContentMeasured;
+
+        /// <summary>The ring of vitals that sits around the map, drawn on the main display canvas.</summary>
+        private Transform _hudVitalsRing;
+
+        /// <summary>The map itself, drawn on its own canvas inside the tracker.</summary>
+        private Transform _miniMapFace;
+
+        private bool _playerHiddenForSettings;
+
+        /// <summary>
+        /// Takes the character out of sight while the settings panel is up.
+        /// <para>
+        /// The panel is read at arm's length, which is exactly where the arms are: the beam comes out
+        /// through the back of a hand, and the hand itself sits between the player and the text. The
+        /// character is not doing anything while the panel is open, so there is nothing to lose by
+        /// removing it for the duration.
+        /// </para>
+        /// </summary>
+        private void UpdatePlayerVisibility()
+        {
+            bool hide = VRConfig.HidePlayerInSettings && _settingsPanel.IsOpen;
+
+            if (hide == _playerHiddenForSettings)
+                return;
+
+            _playerHiddenForSettings = hide;
+
+            if (hide)
+                HidePlayerRenderers();
+            else
+                RestorePlayerRenderers();
+
+            MelonLogger.Msg($"[VRPlayer] Character {(hide ? "hidden for the settings panel" : "visible again")}");
         }
 
         private bool CacheOriginalRendererStates()
@@ -1828,6 +2006,10 @@ namespace SonsVRMod
             {
                 canvasTransform.localScale = Vector3.one;
                 _screenSpaceCanvas = canvasTransform.GetComponent<Canvas>();
+
+                _hudVitalsRing = canvasTransform.Find("ToggleableHUD/PlayerVitalUiRenderTextureGroup");
+                if (_hudVitalsRing == null)
+                    MelonLogger.Warning("[VRPlayer] No vitals ring on the display: its size will not track the map");
             }
         }
 
@@ -1842,6 +2024,10 @@ namespace SonsVRMod
                 return;
             }
 
+            Transform playerUi = playerStandin.transform.Find("PlayerUI");
+            if (playerUi != null && VRConfig.LogInterfaceLayout)
+                VRHudRecon.DumpOnce(playerUi);
+
             _PlayerMiniMapTransf = playerStandin.transform.Find("PlayerUI/PlayerMiniMap");
 
             Transform minimapcanvasTransform =
@@ -1849,6 +2035,12 @@ namespace SonsVRMod
             if (minimapcanvasTransform != null)
             {
                 _playerMiniMapCanvas = minimapcanvasTransform.GetComponent<Canvas>();
+
+                // The mask, not the map under it: the map is far larger than what is shown and is
+                // scrolled about behind the mask, so the mask is the part that stays put.
+                _miniMapFace = minimapcanvasTransform.Find("ScreenMask");
+                if (_miniMapFace == null)
+                    MelonLogger.Warning("[VRPlayer] No map face found: its size will not track the ring");
             }
 
             Transform gpsTransform = playerStandin.transform.Find("PlayerUI/PlayerMiniMap/GPSTrackerSystem");
@@ -1866,7 +2058,7 @@ namespace SonsVRMod
             _screenSpaceCanvas.worldCamera = UsedCamera;
             _screenSpaceCanvas.gameObject.layer = LayerMask.NameToLayer("Default");
 
-            float targetWorldHeight = 0.35f;
+            float targetWorldHeight = VRConfig.HudSize;
             float estimatedCanvasHeightInPixels = Screen.height;
             float scale = targetWorldHeight / estimatedCanvasHeightInPixels;
             _screenSpaceCanvas.transform.localScale = Vector3.one * scale;
@@ -1878,6 +2070,7 @@ namespace SonsVRMod
             }
 
             _canvasConvertedToWorldSpace = true;
+            _hudContentMeasured = false;
         }
 
         private void ConvertMinimapCanvasToWorldSpace()
@@ -1888,7 +2081,7 @@ namespace SonsVRMod
             _playerMiniMapCanvas.worldCamera = UsedCamera;
             _playerMiniMapCanvas.gameObject.layer = LayerMask.NameToLayer("Default");
 
-            float targetWorldHeight = 0.35f;
+            float targetWorldHeight = VRConfig.HudSize;
             float canvasHeightInPixels = Screen.height;
 
             float scale = targetWorldHeight / canvasHeightInPixels;
@@ -1901,6 +2094,7 @@ namespace SonsVRMod
             }
 
             _canvasMinimapConvertedToWorldSpace = true;
+            _miniMapContentMeasured = false;
         }
 
         private void UpdateCanvasPositionForVR()
@@ -1915,7 +2109,17 @@ namespace SonsVRMod
             // covers it. The backpack sits close to the player and was hiding the pointer while the
             // containers, further away, did not: the distance has to clear the nearest thing the
             // player leans over.
-            Vector3 desiredPosition = StereoRender.Head.position + headForward * VRConfig.InventoryCanvasDistance;
+            // One point, and everything on the display hangs off it: shifting it moves the map,
+            // the ring and the messages together, without disturbing how they sit against each other.
+            Vector3 desiredPosition = StereoRender.Head.position
+                                      + headForward * VRConfig.InventoryCanvasDistance
+                                      + headRight * VRConfig.HudOffsetX
+                                      + headUp * VRConfig.HudOffsetY;
+
+            // Scale re-applied every frame, not only at conversion, so the size can be adjusted from
+            // the settings panel and the effect seen while the slider is moving.
+            ApplyHudScale(_screenSpaceCanvas);
+            ApplyHudScale(_playerMiniMapCanvas);
 
             if (_screenSpaceCanvas != null)
             {
@@ -1928,17 +2132,21 @@ namespace SonsVRMod
                 if (_screenSpaceCanvas.worldCamera != UsedCamera)
                     _screenSpaceCanvas.worldCamera = UsedCamera;
 
-                _screenSpaceCanvas.transform.SetPositionAndRotation(desiredPosition, desiredRotation);
+                Vector3 hudShift = HudScaleCompensation(_screenSpaceCanvas, _hudVitalsRing,
+                    desiredRotation, ref _hudContentCentre, ref _hudContentMeasured);
+
+                _screenSpaceCanvas.transform.SetPositionAndRotation(desiredPosition - hudShift,
+                    desiredRotation);
             }
 
             if (_playerMiniMapCanvas != null && _PlayerMiniMapTransf != null)
             {
-                float MinimapOffsetRight = 0.335f; // + = Right, - = Left
-                float MinimapOffsetDown = 0.21f;
-
+                // Adjustable from the settings panel: these two numbers are the whole of what
+                // lines the map up with the ring around it, and the right value is whatever looks
+                // right in the headset.
                 Vector3 offset =
-                    headRight * MinimapOffsetRight +
-                    (-headUp) * MinimapOffsetDown;
+                    headRight * VRConfig.MiniMapOffsetX +
+                    headUp * VRConfig.MiniMapOffsetY;
 
                 Vector3 finalPosition = desiredPosition + offset;
 
@@ -1948,7 +2156,11 @@ namespace SonsVRMod
                 if (_playerMiniMapCanvas.worldCamera != UsedCamera)
                     _playerMiniMapCanvas.worldCamera = UsedCamera;
 
-                _playerMiniMapCanvas.transform.SetPositionAndRotation(finalPosition, minidesiredRotation);
+                Vector3 mapShift = HudScaleCompensation(_playerMiniMapCanvas, _miniMapFace,
+                    minidesiredRotation, ref _miniMapContentCentre, ref _miniMapContentMeasured);
+
+                _playerMiniMapCanvas.transform.SetPositionAndRotation(finalPosition - mapShift,
+                    minidesiredRotation);
             }
         }
 

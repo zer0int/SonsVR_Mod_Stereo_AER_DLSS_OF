@@ -8,7 +8,7 @@ using Valve.VR;
 using Il2Cpp;
 
 // MelonLoader mod metadata
-[assembly: MelonInfo(typeof(SonsVRMod.SonsVRMod), "SonsVR_Mod", "1.0.0", "Anthony", null)]
+[assembly: MelonInfo(typeof(SonsVRMod.SonsVRMod), SonsVRMod.ModInfo.Name, SonsVRMod.ModInfo.Version, SonsVRMod.ModInfo.Author, null)]
 [assembly: MelonGame("Endnight", "SonsOfTheForest")]
 
 namespace SonsVRMod
@@ -272,7 +272,7 @@ namespace SonsVRMod
             // controllers down. Requiring full player control was a stricter test than that needed,
             // and it took the movement keys away everywhere the player is not behind their own
             // camera, cutscenes included.
-            if (!VRMenu.Active)
+            if (!VRMenu.Active && !VRSettingsPanel.AnyOpen)
             {
                 VRProfiler.Begin();
                 kh?.InjectMovement();

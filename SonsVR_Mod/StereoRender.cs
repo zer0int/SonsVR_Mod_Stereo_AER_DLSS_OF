@@ -1115,6 +1115,47 @@ namespace SonsVRMod
                             $"-> 0x{merged:X}");
         }
 
+        private bool _loadingMode;
+
+        /// <summary>
+        /// Puts the eyes into darkness while a scene loads, without stopping them.
+        /// <para>
+        /// Nothing is drawn but the interface layers, and the background is cleared to black, so the
+        /// player sees an empty room with the loading panel in it rather than a frozen frame of a
+        /// world that is being taken apart around them.
+        /// </para>
+        /// </summary>
+        public void SetLoadingMode(bool loading)
+        {
+            if (_loadingMode == loading || LeftCam == null || RightCam == null)
+                return;
+
+            _loadingMode = loading;
+
+            if (loading)
+            {
+                LeftCam.clearFlags = CameraClearFlags.SolidColor;
+                RightCam.clearFlags = CameraClearFlags.SolidColor;
+                LeftCam.backgroundColor = Color.black;
+                RightCam.backgroundColor = Color.black;
+
+                // Interface layers only: the loading panel has to come through, the half built world
+                // must not.
+                int uiOnly = 1 << 5;
+                LeftCam.cullingMask = uiOnly;
+                RightCam.cullingMask = uiOnly;
+            }
+            else
+            {
+                LeftCam.clearFlags = CameraClearFlags.Skybox;
+                RightCam.clearFlags = CameraClearFlags.Skybox;
+                LeftCam.cullingMask = defaultCullingMask;
+                RightCam.cullingMask = defaultCullingMask;
+            }
+
+            MelonLogger.Msg($"[StereoRender] Eyes {(loading ? "darkened for loading" : "back to the world")}");
+        }
+
         /// <summary>Overrides the culling mask of both eye cameras (used to hide the VR view).</summary>
         public void SetCameraMask(int mask)
         {

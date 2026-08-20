@@ -38,6 +38,7 @@ namespace SonsVRMod
             new System.Collections.Generic.HashSet<string>();
 
         private readonly VRUiToolkit _uiToolkit = new VRUiToolkit();
+        private readonly VRLaser _laser = new VRLaser();
         private Canvas _primary;
         private RectTransform _primaryRect;
         private RectTransform _cursorRect;
@@ -95,6 +96,7 @@ namespace SonsVRMod
 
             Active = true;
             _eyeCamera = eyeCamera;
+            VRLaser.UpdateHandSwitch();
 
             PlacePanels(head);
 
@@ -153,6 +155,7 @@ namespace SonsVRMod
             {
                 _uiToolkit.Release();
                 DestroyCursor();
+                _laser.Hide();
             }
 
             Active = false;
@@ -388,9 +391,19 @@ namespace SonsVRMod
             if (_primaryRect == null)
                 return;
 
-            Vector2 stick = NativeVRInput.GetVector2("ThumbstickLeft");
-            if (stick.magnitude < 0.15f)
-                stick = Vector2.zero;
+            // Aiming a controller at the panel wins over steering a cursor across it.
+            if (_laser.TryAim(_primaryRect, out Vector2 aimed))
+            {
+                _cursorPosition = aimed;
+                EnsureCursorVisual();
+
+                if (_cursorRect != null)
+                    _cursorRect.anchoredPosition = _cursorPosition;
+
+                return;
+            }
+
+            Vector2 stick = ReadPointerStick();
 
             _cursorPosition += stick * VRConfig.MenuCursorSpeed * Time.unscaledDeltaTime;
 
@@ -451,6 +464,37 @@ namespace SonsVRMod
             _cursorRect = null;
         }
 
+        /// <summary>
+        /// The stick driving the pointer: either one, whichever is being pushed further.
+        /// <para>
+        /// Both hands work in a menu because there is no reason to make the player remember which one
+        /// does. Neither stick has anything else to do here: snap turning is suspended while a menu is
+        /// up, and gameplay input is not injected at all.
+        /// </para>
+        /// </summary>
+        private static Vector2 ReadPointerStick()
+        {
+            Vector2 left = NativeVRInput.GetVector2("ThumbstickLeft");
+            Vector2 right = NativeVRInput.GetVector2("ThumbstickRight");
+
+            Vector2 stick = right.sqrMagnitude > left.sqrMagnitude ? right : left;
+
+            return stick.magnitude < 0.15f ? Vector2.zero : stick;
+        }
+
+        /// <summary>
+        /// The click. While the beam is in use it belongs to the pointing hand alone, since the other
+        /// trigger is what takes the beam across. Without a beam either trigger will do.
+        /// </summary>
+        private static bool ReadPointerClick()
+        {
+            if (VRConfig.LaserPointer)
+                return VRLaser.ClickHeld();
+
+            return NativeVRInput.GetBoolean("TriggerLeft_Press") ||
+                   NativeVRInput.GetBoolean("TriggerRight_Press");
+        }
+
         /// <summary>A small marker on the panel, so the player can see where they are pointing.</summary>
         private void EnsureCursorVisual()
         {
@@ -461,6 +505,7 @@ namespace SonsVRMod
             go.transform.SetParent(_primary.transform, false);
 
             var image = go.AddComponent<Image>();
+            image.sprite = VRLaser.CircleSprite();
             image.color = new Color(1f, 1f, 1f, 0.9f);
             image.raycastTarget = false;
 
@@ -492,7 +537,7 @@ namespace SonsVRMod
             if (screen.z <= 0f)
                 return;
 
-            bool click = NativeVRInput.GetBoolean("TriggerLeft_Press");
+            bool click = ReadPointerClick();
 
             StateEvent.From(mouse, out var eventPtr);
             mouse.position.WriteValueIntoEvent(new Vector2(screen.x, screen.y), eventPtr);

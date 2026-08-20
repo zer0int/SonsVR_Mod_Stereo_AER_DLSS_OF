@@ -180,7 +180,11 @@ namespace SonsVRMod
                 // Loading screens run a camera that only draws interface layers. Binding to it wakes
                 // the whole VR pipeline up in the middle of the heaviest part of a scene load, and
                 // gives the headset nothing to show anyway, since that interface is screen space.
-                if (RendersOnlyInterface(cam))
+                // Same exception as the empty mask above, which this check was missing: the camera we
+                // strip for the desktop mirror ends up drawing nothing, so it reads as an interface
+                // only camera and was rejected. Discovery then found nothing at all and the rig ran
+                // on a stale binding for the rest of the session.
+                if (cam != bound && RendersOnlyInterface(cam))
                 {
                     LogCandidateOnce(cam, "skipped, draws interface layers only");
                     continue;

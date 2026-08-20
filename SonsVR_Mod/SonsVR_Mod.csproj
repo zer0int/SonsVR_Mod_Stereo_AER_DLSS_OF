@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net6.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -6,8 +6,10 @@
 		<RootNamespace>SonsVRMod</RootNamespace>
 		<LangVersion>default</LangVersion>
 		<IsPackable>false</IsPackable>
-		<AssemblyVersion>1.0.0.0</AssemblyVersion>
-		<FileVersion>1.0.0.0</FileVersion>
+		<AssemblyVersion>0.0.4.0</AssemblyVersion>
+		<FileVersion>0.0.4.0</FileVersion>
+		<!-- Keep in step with ModInfo.Version and the GitHub release tag. -->
+		<InformationalVersion>0.0.4-alpha</InformationalVersion>
 		<NeutralLanguage>en-US</NeutralLanguage>
 		<LangVersion>latest</LangVersion>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -55,939 +57,1251 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="0Harmony">
 		  <HintPath>$(MelonDir)\net6\0Harmony.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Accessibility">
 		  <HintPath>$(MelonDir)\Managed\Accessibility.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="AsmResolver">
 		  <HintPath>$(MelonDir)\net6\AsmResolver.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="AsmResolver.DotNet">
 		  <HintPath>$(MelonDir)\net6\AsmResolver.DotNet.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="AsmResolver.PE">
 		  <HintPath>$(MelonDir)\net6\AsmResolver.PE.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="AsmResolver.PE.File">
 		  <HintPath>$(MelonDir)\net6\AsmResolver.PE.File.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Assembly-CSharp">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Assembly-CSharp.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="AssetRipper.VersionUtilities">
 		  <HintPath>$(MelonDir)\net6\AssetRipper.VersionUtilities.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="AssetsTools.NET">
 		  <HintPath>$(MelonDir)\net6\AssetsTools.NET.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="bHapticsLib">
 		  <HintPath>$(MelonDir)\net6\bHapticsLib.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Boo.Lang">
 		  <HintPath>$(MelonDir)\Managed\Boo.Lang.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Boo.Lang.Compiler">
 		  <HintPath>$(MelonDir)\Managed\Boo.Lang.Compiler.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Boo.Lang.Extensions">
 		  <HintPath>$(MelonDir)\Managed\Boo.Lang.Extensions.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Boo.Lang.Parser">
 		  <HintPath>$(MelonDir)\Managed\Boo.Lang.Parser.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Boo.Lang.PatternMatching">
 		  <HintPath>$(MelonDir)\Managed\Boo.Lang.PatternMatching.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Boo.Lang.Useful">
 		  <HintPath>$(MelonDir)\Managed\Boo.Lang.Useful.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="CommandLine">
 		  <HintPath>$(MelonDir)\Dependencies\Il2CppAssemblyGenerator\Cpp2IL\CommandLine.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Commons.Xml.Relaxng">
 		  <HintPath>$(MelonDir)\Managed\Commons.Xml.Relaxng.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Cpp2IL.Core">
 		  <HintPath>$(MelonDir)\Dependencies\Il2CppAssemblyGenerator\Cpp2IL\Cpp2IL.Core.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="cscompmgd">
 		  <HintPath>$(MelonDir)\Managed\cscompmgd.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="CustomMarshalers">
 		  <HintPath>$(MelonDir)\Managed\CustomMarshalers.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Disarm">
 		  <HintPath>$(MelonDir)\Dependencies\Il2CppAssemblyGenerator\Cpp2IL\Disarm.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Gee.External.Capstone">
 		  <HintPath>$(MelonDir)\Dependencies\Il2CppAssemblyGenerator\Cpp2IL\Gee.External.Capstone.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="I18N">
 		  <HintPath>$(MelonDir)\Managed\I18N.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="I18N.CJK">
 		  <HintPath>$(MelonDir)\Managed\I18N.CJK.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="I18N.MidEast">
 		  <HintPath>$(MelonDir)\Managed\I18N.MidEast.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="I18N.Other">
 		  <HintPath>$(MelonDir)\Managed\I18N.Other.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="I18N.Rare">
 		  <HintPath>$(MelonDir)\Managed\I18N.Rare.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="I18N.West">
 		  <HintPath>$(MelonDir)\Managed\I18N.West.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="IBM.Data.DB2">
 		  <HintPath>$(MelonDir)\Managed\IBM.Data.DB2.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Iced">
 		  <HintPath>$(MelonDir)\net6\Iced.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2Cpp">
 		  <HintPath>$(MelonDir)\Dependencies\SupportModules\Il2Cpp.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppAdvancedTerrainGrass">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppAdvancedTerrainGrass.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppAmplifyImposters">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppAmplifyImposters.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppAnimatorEvent">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppAnimatorEvent.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppAssemblyGenerator">
 		  <HintPath>$(MelonDir)\Dependencies\Il2CppAssemblyGenerator\Il2CppAssemblyGenerator.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppAstarPathfindingProject">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppAstarPathfindingProject.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppBacktrace.Unity">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppBacktrace.Unity.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2Cppbolt">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2Cppbolt.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppBolt.Unity">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppBolt.Unity.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2Cppbolt.user">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2Cppbolt.user.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppBulletBallistics">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppBulletBallistics.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2Cppcom.rlabrecque.steamworks.net">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2Cppcom.rlabrecque.steamworks.net.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppCommandLine">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppCommandLine.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppCrest">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppCrest.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppCrest.Examples">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppCrest.Examples.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppDigitalRuby.ProceduralLightning">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppDigitalRuby.ProceduralLightning.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppDynamicBone">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppDynamicBone.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppEndnight">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppEndnight.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppEndnight.Backtrace">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppEndnight.Backtrace.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppEndnight.Localization">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppEndnight.Localization.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppExpanse">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppExpanse.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppFluidFlow">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppFluidFlow.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppFMOD.Unity">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppFMOD.Unity.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2Cppgeometry3Sharp">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2Cppgeometry3Sharp.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppInterop.Common">
 		  <HintPath>$(MelonDir)\net6\Il2CppInterop.Common.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppInterop.Generator">
 		  <HintPath>$(MelonDir)\net6\Il2CppInterop.Generator.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppInterop.HarmonySupport">
 		  <HintPath>$(MelonDir)\Dependencies\Il2CppAssemblyGenerator\Il2CppInterop.HarmonySupport.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppInterop.Runtime">
 		  <HintPath>$(MelonDir)\net6\Il2CppInterop.Runtime.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppiTween">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppiTween.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppJustinGarza.GaussianBlurHDRP">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppJustinGarza.GaussianBlurHDRP.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppLibNoise.Unity">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppLibNoise.Unity.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppLitJson">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppLitJson.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppLocomotion">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppLocomotion.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppMicroSplatChanges">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppMicroSplatChanges.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppMono.Security">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppMono.Security.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2Cppmscorlib">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2Cppmscorlib.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppMudBun">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppMudBun.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Ai.Utilities">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Ai.Utilities.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Ai.Vail">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Ai.Vail.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Animation.Mae">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Animation.Mae.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Areas">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Areas.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Atmosphere">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Atmosphere.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Attributes">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Attributes.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Cinematics">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Cinematics.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Construction">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Construction.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Construction.GRABS">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Construction.GRABS.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Construction.Utils">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Construction.Utils.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.ConstructionBoltToken">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.ConstructionBoltToken.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Crest">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Crest.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Debug">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Debug.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Dlss">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Dlss.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Environment">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Environment.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Events">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Events.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Extensions">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Extensions.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.FieldOfView">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.FieldOfView.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.FMOD">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.FMOD.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.FpsUtility">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.FpsUtility.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.GameApplication">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.GameApplication.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Gameplay.GameSetup">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Gameplay.GameSetup.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Gameplay.LevelProps">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Gameplay.LevelProps.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Gameplay.StatusEffects">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Gameplay.StatusEffects.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Gui">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Gui.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Gui.Colors">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Gui.Colors.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Gui.Multiplayer">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Gui.Multiplayer.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Gui.Options">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Gui.Options.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Input">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Input.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Interfaces">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Interfaces.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Item">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Item.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Loading">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Loading.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Lodding">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Lodding.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Multiplayer">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Multiplayer.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.ObsoleteMonos">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.ObsoleteMonos.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Physics">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Physics.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.PostProcessing">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.PostProcessing.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Quality">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Quality.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Ragdoll">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Ragdoll.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Rendering">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Rendering.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Save">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Save.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Scratchpad">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Scratchpad.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Settings">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Settings.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.SettingsWrappers">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.SettingsWrappers.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.StatSystem">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.StatSystem.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Testing">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Testing.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Tests">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Tests.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Trees">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Trees.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.UiElements">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.UiElements.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Utilities">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Utilities.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.VFX">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.VFX.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.VFX.SimpleUnderwater">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.VFX.SimpleUnderwater.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSons.Weapon">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSons.Weapon.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2CppSonsTerrainScripts">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppSonsTerrainScripts.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Il2Cpp__Generated">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Il2Cpp__Generated.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="IndexRange">
 		  <HintPath>$(MelonDir)\net6\IndexRange.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="IPA">
 		  <HintPath>$(MelonDir)\Dependencies\CompatibilityLayers\IPA.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="LibCpp2IL">
 		  <HintPath>$(MelonDir)\Dependencies\Il2CppAssemblyGenerator\Cpp2IL\LibCpp2IL.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="MelonLoader">
 		  <HintPath>$(MelonDir)\net6\MelonLoader.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="MelonLoader.NativeHost">
 		  <HintPath>$(MelonDir)\net6\MelonLoader.NativeHost.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="MelonStartScreen">
 		  <HintPath>$(MelonDir)\net6\MelonStartScreen.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Microsoft.Bcl.AsyncInterfaces">
 		  <HintPath>$(MelonDir)\net6\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Microsoft.Diagnostics.NETCore.Client">
 		  <HintPath>$(MelonDir)\net6\Microsoft.Diagnostics.NETCore.Client.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Microsoft.Diagnostics.Runtime">
 		  <HintPath>$(MelonDir)\net6\Microsoft.Diagnostics.Runtime.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Microsoft.Extensions.Configuration">
 		  <HintPath>$(MelonDir)\net6\Microsoft.Extensions.Configuration.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Microsoft.Extensions.Configuration.Abstractions">
 		  <HintPath>$(MelonDir)\net6\Microsoft.Extensions.Configuration.Abstractions.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Microsoft.Extensions.Configuration.Binder">
 		  <HintPath>$(MelonDir)\net6\Microsoft.Extensions.Configuration.Binder.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions">
 		  <HintPath>$(MelonDir)\net6\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Microsoft.Extensions.Logging">
 		  <HintPath>$(MelonDir)\net6\Microsoft.Extensions.Logging.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Microsoft.Extensions.Logging.Abstractions">
 		  <HintPath>$(MelonDir)\net6\Microsoft.Extensions.Logging.Abstractions.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Microsoft.Extensions.Options">
 		  <HintPath>$(MelonDir)\net6\Microsoft.Extensions.Options.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Microsoft.Extensions.Primitives">
 		  <HintPath>$(MelonDir)\net6\Microsoft.Extensions.Primitives.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Microsoft.Web.Infrastructure">
 		  <HintPath>$(MelonDir)\Managed\Microsoft.Web.Infrastructure.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Microsoft.Win32.SystemEvents">
 		  <HintPath>$(MelonDir)\net6\Microsoft.Win32.SystemEvents.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Mono.Cecil">
 		  <HintPath>$(MelonDir)\net6\Mono.Cecil.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Mono.Cecil.Mdb">
 		  <HintPath>$(MelonDir)\net6\Mono.Cecil.Mdb.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Mono.Cecil.Pdb">
 		  <HintPath>$(MelonDir)\net6\Mono.Cecil.Pdb.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Mono.Cecil.Rocks">
 		  <HintPath>$(MelonDir)\net6\Mono.Cecil.Rocks.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Mono.CompilerServices.SymbolWriter">
 		  <HintPath>$(MelonDir)\Managed\Mono.CompilerServices.SymbolWriter.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Mono.CSharp">
 		  <HintPath>$(MelonDir)\Managed\Mono.CSharp.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Mono.Data.Sqlite">
 		  <HintPath>$(MelonDir)\Managed\Mono.Data.Sqlite.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Mono.Data.Tds">
 		  <HintPath>$(MelonDir)\Managed\Mono.Data.Tds.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Mono.Messaging">
 		  <HintPath>$(MelonDir)\Managed\Mono.Messaging.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Mono.Posix">
 		  <HintPath>$(MelonDir)\Managed\Mono.Posix.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Mono.Security">
 		  <HintPath>$(MelonDir)\Managed\Mono.Security.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Mono.WebBrowser">
 		  <HintPath>$(MelonDir)\Managed\Mono.WebBrowser.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="MonoMod.RuntimeDetour">
 		  <HintPath>$(MelonDir)\net6\MonoMod.RuntimeDetour.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="MonoMod.Utils">
 		  <HintPath>$(MelonDir)\net6\MonoMod.Utils.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Newtonsoft.Json">
 		  <HintPath>$(MelonDir)\Managed\Newtonsoft.Json.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Novell.Directory.Ldap">
 		  <HintPath>$(MelonDir)\Managed\Novell.Directory.Ldap.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Pastel">
 		  <HintPath>$(MelonDir)\Dependencies\Il2CppAssemblyGenerator\Cpp2IL\Pastel.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Preload">
 		  <HintPath>$(MelonDir)\Dependencies\SupportModules\Preload.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="SMDiagnostics">
 		  <HintPath>$(MelonDir)\Managed\SMDiagnostics.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="SonsSteamVR_IL2CPP">
 		  <HintPath>MelonLoaderUserLibs\SonsSteamVR_IL2CPP.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="StableNameDotNet">
 		  <HintPath>$(MelonDir)\Dependencies\Il2CppAssemblyGenerator\Cpp2IL\StableNameDotNet.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.ComponentModel.Composition">
 		  <HintPath>$(MelonDir)\Managed\System.ComponentModel.Composition.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Configuration.ConfigurationManager">
 		  <HintPath>$(MelonDir)\net6\System.Configuration.ConfigurationManager.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Configuration.Install">
 		  <HintPath>$(MelonDir)\Managed\System.Configuration.Install.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Data.Entity">
 		  <HintPath>$(MelonDir)\Managed\System.Data.Entity.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Data.Linq">
 		  <HintPath>$(MelonDir)\Managed\System.Data.Linq.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Data.OracleClient">
 		  <HintPath>$(MelonDir)\Managed\System.Data.OracleClient.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Data.Services">
 		  <HintPath>$(MelonDir)\Managed\System.Data.Services.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Data.Services.Client">
 		  <HintPath>$(MelonDir)\Managed\System.Data.Services.Client.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Design">
 		  <HintPath>$(MelonDir)\Managed\System.Design.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.DirectoryServices">
 		  <HintPath>$(MelonDir)\Managed\System.DirectoryServices.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.DirectoryServices.Protocols">
 		  <HintPath>$(MelonDir)\Managed\System.DirectoryServices.Protocols.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Drawing.Common">
 		  <HintPath>$(MelonDir)\net6\System.Drawing.Common.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Drawing.Design">
 		  <HintPath>$(MelonDir)\Managed\System.Drawing.Design.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.EnterpriseServices">
 		  <HintPath>$(MelonDir)\Managed\System.EnterpriseServices.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.IdentityModel">
 		  <HintPath>$(MelonDir)\Managed\System.IdentityModel.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.IdentityModel.Selectors">
 		  <HintPath>$(MelonDir)\Managed\System.IdentityModel.Selectors.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Json">
 		  <HintPath>$(MelonDir)\Managed\System.Json.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Management">
 		  <HintPath>$(MelonDir)\Managed\System.Management.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Messaging">
 		  <HintPath>$(MelonDir)\Managed\System.Messaging.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Net.Http.Formatting">
 		  <HintPath>$(MelonDir)\Managed\System.Net.Http.Formatting.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Net.Http.WebRequest">
 		  <HintPath>$(MelonDir)\Managed\System.Net.Http.WebRequest.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Reflection.Context">
 		  <HintPath>$(MelonDir)\Managed\System.Reflection.Context.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Runtime.Caching">
 		  <HintPath>$(MelonDir)\Managed\System.Runtime.Caching.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Runtime.DurableInstancing">
 		  <HintPath>$(MelonDir)\Managed\System.Runtime.DurableInstancing.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Runtime.Remoting">
 		  <HintPath>$(MelonDir)\Managed\System.Runtime.Remoting.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Runtime.Serialization.Formatters.Soap">
 		  <HintPath>$(MelonDir)\Managed\System.Runtime.Serialization.Formatters.Soap.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Security.Cryptography.ProtectedData">
 		  <HintPath>$(MelonDir)\net6\System.Security.Cryptography.ProtectedData.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Security.Permissions">
 		  <HintPath>$(MelonDir)\net6\System.Security.Permissions.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.ServiceModel">
 		  <HintPath>$(MelonDir)\Managed\System.ServiceModel.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.ServiceModel.Activation">
 		  <HintPath>$(MelonDir)\Managed\System.ServiceModel.Activation.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.ServiceModel.Discovery">
 		  <HintPath>$(MelonDir)\Managed\System.ServiceModel.Discovery.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.ServiceModel.Internals">
 		  <HintPath>$(MelonDir)\Managed\System.ServiceModel.Internals.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.ServiceModel.Routing">
 		  <HintPath>$(MelonDir)\Managed\System.ServiceModel.Routing.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Text.Json">
 		  <HintPath>$(MelonDir)\Dependencies\Il2CppAssemblyGenerator\Cpp2IL\System.Text.Json.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Web.Abstractions">
 		  <HintPath>$(MelonDir)\Managed\System.Web.Abstractions.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Web.ApplicationServices">
 		  <HintPath>$(MelonDir)\Managed\System.Web.ApplicationServices.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Web.DynamicData">
 		  <HintPath>$(MelonDir)\Managed\System.Web.DynamicData.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Web.Extensions">
 		  <HintPath>$(MelonDir)\Managed\System.Web.Extensions.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Web.Extensions.Design">
 		  <HintPath>$(MelonDir)\Managed\System.Web.Extensions.Design.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Web.Http">
 		  <HintPath>$(MelonDir)\Managed\System.Web.Http.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Web.Http.SelfHost">
 		  <HintPath>$(MelonDir)\Managed\System.Web.Http.SelfHost.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Web.Http.WebHost">
 		  <HintPath>$(MelonDir)\Managed\System.Web.Http.WebHost.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Web.Mvc">
 		  <HintPath>$(MelonDir)\Managed\System.Web.Mvc.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Web.Razor">
 		  <HintPath>$(MelonDir)\Managed\System.Web.Razor.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Web.RegularExpressions">
 		  <HintPath>$(MelonDir)\Managed\System.Web.RegularExpressions.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Web.Routing">
 		  <HintPath>$(MelonDir)\Managed\System.Web.Routing.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Web.Services">
 		  <HintPath>$(MelonDir)\Managed\System.Web.Services.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Web.WebPages">
 		  <HintPath>$(MelonDir)\Managed\System.Web.WebPages.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Web.WebPages.Deployment">
 		  <HintPath>$(MelonDir)\Managed\System.Web.WebPages.Deployment.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Web.WebPages.Razor">
 		  <HintPath>$(MelonDir)\Managed\System.Web.WebPages.Razor.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Windows.Extensions">
 		  <HintPath>$(MelonDir)\net6\System.Windows.Extensions.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Windows.Forms">
 		  <HintPath>$(MelonDir)\Managed\System.Windows.Forms.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Windows.Forms.DataVisualization">
 		  <HintPath>$(MelonDir)\Managed\System.Windows.Forms.DataVisualization.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="System.Xaml">
 		  <HintPath>$(MelonDir)\Managed\System.Xaml.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="SystemWebTestShim">
 		  <HintPath>$(MelonDir)\Managed\SystemWebTestShim.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Tomlet">
 		  <HintPath>$(MelonDir)\net6\Tomlet.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Unity.Addressables">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Unity.Addressables.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Unity.Burst">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Unity.Burst.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Unity.Burst.Unsafe">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Unity.Burst.Unsafe.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Unity.Collections">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Unity.Collections.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Unity.Collections.LowLevel.ILSupport">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Unity.Collections.LowLevel.ILSupport.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Unity.CrossSceneReference">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Unity.CrossSceneReference.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Unity.InputSystem">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Unity.InputSystem.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Unity.Localization">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Unity.Localization.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Unity.Mathematics">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Unity.Mathematics.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Unity.RenderPipelines.BatchRendererGroup-Testing">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Unity.RenderPipelines.BatchRendererGroup-Testing.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Unity.RenderPipelines.Core.Runtime">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Unity.RenderPipelines.Core.Runtime.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Unity.RenderPipelines.HighDefinition.Config.Runtime">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Unity.RenderPipelines.HighDefinition.Config.Runtime.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Unity.RenderPipelines.HighDefinition.Runtime">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Unity.RenderPipelines.HighDefinition.Runtime.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Unity.ResourceManager">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Unity.ResourceManager.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Unity.Splines">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Unity.Splines.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Unity.TextMeshPro">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Unity.TextMeshPro.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Unity.Timeline">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Unity.Timeline.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="Unity.VisualEffectGraph.Runtime">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\Unity.VisualEffectGraph.Runtime.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.AccessibilityModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.AccessibilityModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.AIModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.AIModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.AndroidJNIModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.AndroidJNIModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.AnimationModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.AnimationModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.ARModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.ARModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.AssetBundleModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.AssetBundleModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.AudioModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.AudioModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.ClothModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.ClothModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.ClusterInputModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.ClusterInputModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.ClusterRendererModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.ClusterRendererModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.ContentLoadModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.ContentLoadModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.CoreModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.CoreModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.CrashReportingModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.CrashReportingModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.DirectorModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.DirectorModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.DSPGraphModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.DSPGraphModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.GameCenterModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.GameCenterModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.GIModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.GIModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.GridModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.GridModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.HotReloadModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.HotReloadModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.Il2CppAssetBundleManager">
 		  <HintPath>$(MelonDir)\Managed\UnityEngine.Il2CppAssetBundleManager.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.Il2CppImageConversionManager">
 		  <HintPath>$(MelonDir)\Managed\UnityEngine.Il2CppImageConversionManager.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.ImageConversionModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.ImageConversionModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.IMGUIModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.IMGUIModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.InputLegacyModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.InputLegacyModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.InputModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.InputModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.JSONSerializeModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.JSONSerializeModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.LocalizationModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.LocalizationModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.NVIDIAModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.NVIDIAModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.ParticleSystemModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.ParticleSystemModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.PerformanceReportingModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.PerformanceReportingModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.Physics2DModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.Physics2DModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.PhysicsModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.PhysicsModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.ProfilerModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.ProfilerModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.PropertiesModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.PropertiesModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.ScreenCaptureModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.ScreenCaptureModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.SharedInternalsModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.SharedInternalsModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.SpriteMaskModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.SpriteMaskModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.SpriteShapeModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.SpriteShapeModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.StreamingModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.StreamingModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.SubstanceModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.SubstanceModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.SubsystemsModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.SubsystemsModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.TerrainModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.TerrainModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.TerrainPhysicsModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.TerrainPhysicsModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.TextCoreFontEngineModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.TextCoreFontEngineModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.TextCoreTextEngineModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.TextCoreTextEngineModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.TextRenderingModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.TextRenderingModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.TilemapModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.TilemapModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.TLSModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.TLSModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.UI">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.UI.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.UIElementsModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.UIElementsModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.UIModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.UIModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.UmbraModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.UmbraModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.UnityAnalyticsCommonModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.UnityAnalyticsCommonModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.UnityAnalyticsModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.UnityAnalyticsModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.UnityConnectModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.UnityConnectModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.UnityCurlModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.UnityCurlModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.UnityTestProtocolModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.UnityTestProtocolModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.UnityWebRequestAssetBundleModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.UnityWebRequestAssetBundleModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.UnityWebRequestAudioModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.UnityWebRequestAudioModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.UnityWebRequestModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.UnityWebRequestModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.UnityWebRequestTextureModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.UnityWebRequestTextureModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.UnityWebRequestWWWModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.UnityWebRequestWWWModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.VehiclesModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.VehiclesModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.VFXModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.VFXModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.VideoModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.VideoModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.VirtualTexturingModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.VirtualTexturingModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.VRModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.VRModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.WindModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.WindModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="UnityEngine.XRModule">
 		  <HintPath>$(MelonDir)\Il2CppAssemblies\UnityEngine.XRModule.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="ValueTupleBridge">
 		  <HintPath>$(MelonDir)\Managed\ValueTupleBridge.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="WasmDisassembler">
 		  <HintPath>$(MelonDir)\Dependencies\Il2CppAssemblyGenerator\Cpp2IL\WasmDisassembler.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppRootMotion"><HintPath>$(MelonDir)\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath></Reference>
 		<Reference Include="WebSocketDotNet">
 		  <HintPath>$(MelonDir)\net6\WebSocketDotNet.dll</HintPath>
 		</Reference>
@@ -1026,7 +1340,15 @@
 		<Compile Include="Utils.cs" />
 		<Compile Include="Input\VRInput.cs" />
 		<Compile Include="VRConfig.cs" />
-		<Compile Include="VRProfiler.cs" /><Compile Include="VRWatchdog.cs" />
+		<Compile Include="ModInfo.cs" />
+		<Compile Include="VRProfiler.cs" />
+		<Compile Include="VRWatchdog.cs" />
+		<Compile Include="VRArmRecon.cs" />
+		<Compile Include="VRHudRecon.cs" />
+		<Compile Include="VRHands.cs" />
+		<Compile Include="VRSettingsPanel.cs" />
+		<Compile Include="VRLaser.cs" />
+		<Compile Include="VRLoadingScreen.cs" />
 		<Compile Include="VRMenu.cs" />
 		<Compile Include="VRUiToolkit.cs" />
 		<Compile Include="VRPlayer.cs" />
