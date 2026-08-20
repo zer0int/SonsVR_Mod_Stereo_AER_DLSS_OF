@@ -1,0 +1,24 @@
+# Build output.
+# bin/ also receives every referenced assembly, which for this project means the
+# IL2CPP assemblies of the game itself. Those belong to Endnight and must never
+# be published here.
+bin/
+obj/
+
+# Local build settings: these carry absolute paths to a particular machine.
+*.user
+*.DotSettings.user
+
+# IDE state
+.vs/
+.idea/
+.vscode/
+
+# Logs and crash dumps
+*.log
+*.mdmp
+*.dmp
+
+# Assistant instructions, local only
+CLAUDE.md
+.claude/

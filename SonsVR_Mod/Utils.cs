@@ -120,6 +120,40 @@ namespace SonsVRMod
 
 
         /// <summary>
+        /// Converts the translation part of an OpenVR 3x4 pose matrix into a Unity position.
+        /// OpenVR is right-handed with -Z forward while Unity is left-handed with +Z forward,
+        /// so the Z component is negated.
+        /// </summary>
+        public static Vector3 ToUnityPosition(this HmdMatrix34_t m)
+        {
+            return new Vector3(m.m3, m.m7, -m.m11);
+        }
+
+        /// <summary>
+        /// Converts the rotation part of an OpenVR 3x4 pose matrix into a Unity quaternion,
+        /// accounting for the handedness difference between the two coordinate systems.
+        /// </summary>
+        public static Quaternion ToUnityRotation(this HmdMatrix34_t m)
+        {
+            float w = Mathf.Sqrt(Mathf.Max(0f, 1f + m.m0 + m.m5 + m.m10)) * 0.5f;
+            float x = Mathf.Sqrt(Mathf.Max(0f, 1f + m.m0 - m.m5 - m.m10)) * 0.5f;
+            float y = Mathf.Sqrt(Mathf.Max(0f, 1f - m.m0 + m.m5 - m.m10)) * 0.5f;
+            float z = Mathf.Sqrt(Mathf.Max(0f, 1f - m.m0 - m.m5 + m.m10)) * 0.5f;
+
+            CopySign(ref x, -m.m9 + m.m6);
+            CopySign(ref y, -m.m2 + m.m8);
+            CopySign(ref z, m.m4 - m.m1);
+
+            return new Quaternion(x, y, z, w);
+        }
+
+        private static void CopySign(ref float value, float sign)
+        {
+            if (sign < 0f != value < 0f)
+                value = -value;
+        }
+
+        /// <summary>
         /// Determine the signed angle between two vectors, with normal 'n'
         /// as the rotation axis.
         /// </summary>

@@ -90,6 +90,12 @@ namespace SonsVRMod
 
             Instance = this;
 
+            // Load the runtime knobs first: they gate parts of the VR pipeline below.
+            VRConfig.Load();
+
+            // Started before anything else, so a freeze during setup is reported too.
+            VRWatchdog.Start();
+
             // Initialize VR subsystem (OpenVR + input + IL2CPP types)
             InitVR();
         }
@@ -232,14 +238,46 @@ namespace SonsVRMod
         /// </summary>
         public override void OnUpdate()
         {
+            VRProfiler.BeginFrame();
+            VRWatchdog.Beat();
+
             if (vrEnabled)
             {
+                // Blocking WaitGetPoses for this frame. It has to happen before anything reads a
+                // pose, and exactly once, so every VR consumer works off the same snapshot.
+                //
+                // Skipped while the rig is standing down. A scene load pushes frame times from
+                // milliseconds to seconds, and blocking on the compositor once per frame on top of
+                // that turns a slow load into one that looks like it will never end.
+                var stereo = StereoRender.Instance;
+                if (stereo == null || stereo.RenderingActive)
+                {
+                    VRProfiler.Begin();
+                    VRFrame.WaitAndUpdate();
+                    VRProfiler.End(VRProfiler.Section.Poses);
+                }
+
                 // Update OpenVR action states and hand velocities
+                VRProfiler.Begin();
                 NativeVRInput.Update();
+                VRProfiler.End(VRProfiler.Section.Input);
             }
 
-            // Inject simulated keyboard/mouse input based on VR gestures
-            kh?.InjectMovement();
+            // Inject simulated keyboard/mouse input based on VR gestures.
+            //
+            // Everywhere except a menu.
+            //
+            // The problem being avoided is gameplay input reaching a menu: the jump gesture sends a
+            // space press that the menu acts on, triggered by nothing more than putting the
+            // controllers down. Requiring full player control was a stricter test than that needed,
+            // and it took the movement keys away everywhere the player is not behind their own
+            // camera, cutscenes included.
+            if (!VRMenu.Active)
+            {
+                VRProfiler.Begin();
+                kh?.InjectMovement();
+                VRProfiler.End(VRProfiler.Section.Keyboard);
+            }
         }
 
         /// <summary>
@@ -252,17 +290,23 @@ namespace SonsVRMod
 
         /// <summary>
         /// Called after all Update and FixedUpdate methods have run.
-        /// Used here to manually execute the stereo rendering pass if available.
+        /// <para>
+        /// The eye textures are normally submitted at end of frame, after Unity has rendered the eye
+        /// cameras. Submitting from here would always hand the compositor the image of the previous
+        /// frame, so this only acts as a safety net if the end-of-frame coroutine is not running.
+        /// </para>
         /// </summary>
         public override void OnLateUpdate()
         {
-            if (VRPlayer.Instance != null && 
-                VRPlayer.Instance.StereoRender != null && 
-                VRPlayer.Instance.StereoRender.stereoRenderPass != null)
-            {
-                VRPlayer.Instance.StereoRender.stereoRenderPass.Execute();
-                VRPlayer.Instance.kh = kh;
-            }
+            if (VRPlayer.Instance == null)
+                return;
+
+            VRPlayer.Instance.kh = kh;
+
+            if (VRPlayer.Instance.StereoRender != null)
+                VRPlayer.Instance.StereoRender.SubmitFallbackIfNeeded();
+
+            VRProfiler.EndFrame();
         }
 
         /// <summary>

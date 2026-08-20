@@ -78,108 +78,233 @@ namespace SonsVRMod
         {
             UpdateCounter++;
 
-            // Only check every ~50 frames (~0.8s at 60 FPS) to reduce overhead
-            if (UpdateCounter >= 50)
+            // Normally check every ~50 frames (~0.8s at 60 FPS) to reduce overhead, but scan much
+            // more often while there is no valid camera: that is the window right after a scene load,
+            // when the rig is blind and every frame of delay is a frozen image in the headset.
+            bool haveCamera = UsedCamera != null;
+
+            // Scan often while there is no camera, which is the window a scene load sits in, and also
+            // while the inventory is up. The game hands control back to the character before it drops
+            // the inventory camera, and until that is noticed the rig is still frozen and still
+            // driving a camera the player has already left behind.
+            bool inventoryOpen = VRPlayer.Instance != null && VRPlayer.Instance.InventoryCamIsActive;
+            int interval = (haveCamera && !inventoryOpen) ? 50 : 10;
+
+            if (UpdateCounter < interval)
+                return;
+
+            UpdateCounter = 0;
+
+            if (!haveCamera)
             {
-                UpdateCounter = 0;
-
-                // Locate the most relevant active scene and its main camera
-                var sceneAndCam = FindActiveGameplayScene();
-
-                // Only proceed in known gameplay scenes (avoid menus, loading screens, etc.)
-                if ("BlankScene SonsMain SonsTitleScene".Contains(sceneAndCam.scene.name))
-                {
-                    var activeCam = sceneAndCam.camera;
-                    if (activeCam != null)
-                    {
-                        // Detect scene or camera change
-                        if (sceneAndCam.scene.name != UsedSceneName || UsedCamera == null || activeCam != UsedCamera)
-                        {
-                            MelonLogger.Warning($"[VRSystem] Scene or camera changed — respawning VR player rig");
-                            UsedSceneName = sceneAndCam.scene.name;
-                            UsedCamera = activeCam;
-
-                            // Create the VR rig if not already present
-                            if (!RigCreated)
-                            {
-                                CreateCameraRig(UsedCamera);
-                            }
-                        }
-                        else
-                        {
-                            // Scene and camera are stable — just refresh the VR player's reference
-                            if (VRPlayer.Instance != null && sceneAndCam.camera != null)
-                            {
-                                VRPlayer.Instance.SetSceneAndCamera(sceneAndCam);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        MelonLogger.Msg($"[VRSystem] No active camera found in scene: {sceneAndCam.scene.name}");
-                    }
-                }
-                else
-                {
-                    // Not a gameplay scene — clear references
-                    UsedCamera = null;
-                    // Optional: hide VR rig here if needed
-                }
+                UsedCamera = null;
+                UsedSceneName = "";
             }
+
+            LogCameraCensus();
+
+            var sceneAndCam = FindActiveGameplayScene();
+
+            // No scene name check any more.
+            //
+            // Deciding by name meant keeping a list of scenes, and anything not on it was dropped in
+            // silence: opening the options screen loads a scene that was not on the list, so the rig
+            // stood down and stayed down, with nothing in the log to say why. What a camera draws is
+            // a far better test than where it lives, and the filters below already apply it: a camera
+            // that renders nothing, or only interface, is rejected on its own merits.
+            var activeCam = sceneAndCam.camera;
+            if (activeCam == null)
+            {
+                MelonLogger.Msg($"[VRSystem] No active camera found in scene: {sceneAndCam.scene.name}");
+                return;
+            }
+
+            // The rig only has to exist once; the camera it follows is swapped at runtime instead of
+            // rebuilding the rig, which would drop the tracked pose and the render targets.
+            if (VRPlayer.Instance == null)
+            {
+                RigCreated = false;
+                CreateCameraRig(activeCam);
+            }
+
+            if (sceneAndCam.scene.name != UsedSceneName || activeCam != UsedCamera)
+            {
+                MelonLogger.Warning($"[VRSystem] Active camera is now '{activeCam.name}' in scene '{sceneAndCam.scene.name}'");
+                UsedSceneName = sceneAndCam.scene.name;
+                UsedCamera = activeCam;
+            }
+
+            // SetSceneAndCamera early-outs when the camera has not actually changed.
+            if (VRPlayer.Instance != null)
+                VRPlayer.Instance.SetSceneAndCamera(sceneAndCam);
         }
 
         /// <summary>
-        /// Scans all loaded scenes to find the one containing an active gameplay camera.
-        /// Prioritizes "MainCameraFP" (the game's standard first-person camera),
-        /// but falls back to any enabled camera if not found.
+        /// Finds the camera the game is currently rendering from, and the scene it belongs to.
+        /// <para>
+        /// Uses <c>Camera.allCameras</c>, which already contains only enabled cameras, instead of
+        /// walking every root object of every loaded scene as the old implementation did. That scan
+        /// ran <c>GetComponentsInChildren</c> over the whole world and showed up as a periodic hitch.
+        /// </para>
+        /// <para>
+        /// Cameras belonging to the VR rig itself are skipped: they are enabled and would otherwise be
+        /// picked as the camera to follow, making the rig chase its own eyes.
+        /// </para>
         /// </summary>
-        /// <returns>A struct containing the scene and its active camera (or null if none found).</returns>
+        /// <returns>The scene and camera to drive the rig from; camera is null when none qualifies.</returns>
         private ActiveSceneWithCamera FindActiveGameplayScene()
         {
             ActiveSceneWithCamera result = new ActiveSceneWithCamera();
 
-            int sceneCount = SceneManager.sceneCount;
-            for (int i = 0; i < sceneCount; i++)
+            Camera preferred = null;
+            Camera fallback = null;
+
+            var stereo = StereoRender.Instance;
+            var bound = stereo != null ? stereo.HeadCam : null;
+
+            var cameras = Camera.allCameras;
+            foreach (var cam in cameras)
             {
-                var scene = SceneManager.GetSceneAt(i);
-                if (!scene.IsValid() || !scene.isLoaded)
+                if (cam == null || IsVRRigCamera(cam))
                     continue;
 
-                result.scene = scene;
-                bool hasActiveCamera = false;
-
-                // Search all root objects in the scene for cameras
-                var rootObjects = scene.GetRootGameObjects();
-                foreach (var root in rootObjects)
+                // A camera with an empty culling mask draws nothing, so it is never the camera the
+                // game is really showing; following it feeds the headset a black image. The one
+                // exception is the camera we ourselves emptied for the desktop mirror.
+                if (cam.cullingMask == 0 && cam != bound)
                 {
-                    var cameras = root.GetComponentsInChildren<Camera>(true);
-                    foreach (var cam in cameras)
-                    {
-                        if (!cam.isActiveAndEnabled)
-                            continue;
-
-                        // Prefer the game's known FPS camera
-                        if (cam.name.Equals("MainCameraFP"))
-                        {
-                            result.camera = cam;
-                            hasActiveCamera = true;
-                            break;
-                        }
-
-                        // Fallback: accept any active camera
-                        result.camera = cam;
-                        hasActiveCamera = true;
-                        break;
-                    }
-                    if (hasActiveCamera)
-                        break;
+                    LogCandidateOnce(cam, "skipped, empty culling mask");
+                    continue;
                 }
 
-                if (hasActiveCamera)
-                    break; // Return the first valid scene with a camera
+                // Loading screens run a camera that only draws interface layers. Binding to it wakes
+                // the whole VR pipeline up in the middle of the heaviest part of a scene load, and
+                // gives the headset nothing to show anyway, since that interface is screen space.
+                if (RendersOnlyInterface(cam))
+                {
+                    LogCandidateOnce(cam, "skipped, draws interface layers only");
+                    continue;
+                }
+
+                if (cam.name.Equals("MainCameraFP"))
+                {
+                    preferred = cam;
+                    break; // The first-person camera always wins, no need to keep looking.
+                }
+
+                if (cam.name.Equals("InventoryCamera"))
+                {
+                    preferred = cam;
+                    continue; // Keep scanning in case MainCameraFP also shows up.
+                }
+
+                if (fallback == null)
+                    fallback = cam;
+            }
+
+            result.camera = preferred != null ? preferred : fallback;
+            result.scene = SceneManager.GetActiveScene();
+
+            if (result.camera != null)
+            {
+                var camScene = result.camera.gameObject.scene;
+                if (camScene.IsValid())
+                    result.scene = camScene;
             }
 
             return result;
+        }
+
+        // Cameras already reported, so the diagnostic below cannot turn into a per-frame log flood.
+        private readonly System.Collections.Generic.HashSet<string> _reportedCameras =
+            new System.Collections.Generic.HashSet<string>();
+
+        /// <summary>
+        /// Reports a camera that was considered and rejected, once per camera name. Without this the
+        /// only symptom of a bad pick is a black headset, with nothing in the log to explain it.
+        /// </summary>
+        private void LogCandidateOnce(Camera cam, string reason)
+        {
+            string key = cam.name + "|" + reason;
+            if (!_reportedCameras.Add(key))
+                return;
+
+            MelonLogger.Msg($"[VRSystem] Camera '{cam.name}' {reason} " +
+                            $"(mask 0x{cam.cullingMask:X}, depth {cam.depth}, target {(cam.targetTexture != null ? "RT" : "screen")})");
+        }
+
+        private int _censusCountdown;
+        private int _lastCameraCount = -1;
+
+        /// <summary>
+        /// Reports every camera the engine is currently rendering.
+        /// <para>
+        /// The frame is bound by the processor, not the graphics card, and on this pipeline that cost
+        /// is paid per camera: culling, the shadow atlas and the render graph are all built once for
+        /// each one. Two eye cameras were added deliberately, but effects that attach a camera of
+        /// their own, planar water reflections being the usual one, quietly multiply that by however
+        /// many cameras exist. Counting them is the only way to know what is really being paid for.
+        /// </para>
+        /// </summary>
+        private void LogCameraCensus()
+        {
+            if (--_censusCountdown > 0)
+                return;
+
+            _censusCountdown = 20;
+
+            var cameras = Camera.allCameras;
+            if (cameras.Length == _lastCameraCount)
+                return;
+
+            _lastCameraCount = cameras.Length;
+
+            var names = new System.Text.StringBuilder();
+            foreach (var cam in cameras)
+            {
+                if (cam == null)
+                    continue;
+
+                if (names.Length > 0)
+                    names.Append(", ");
+
+                names.Append($"{cam.name}(d{cam.depth:F0}{(cam.targetTexture != null ? ",rt" : "")})");
+            }
+
+            MelonLogger.Msg($"[VRSystem] Rendering {cameras.Length} cameras: {names}");
+        }
+
+        // Layers that carry no world geometry. Built once: LayerMask lookups are string comparisons.
+        private static int _nonWorldLayers = -1;
+
+        /// <summary>
+        /// True when a camera draws nothing but interface layers, which makes it a loading screen or
+        /// an overlay rather than the view the player is meant to be inside of.
+        /// </summary>
+        private static bool RendersOnlyInterface(Camera cam)
+        {
+            if (_nonWorldLayers == -1)
+            {
+                _nonWorldLayers = 0;
+                foreach (string layerName in new[] { "UI", "TransparentFX", "Ignore Raycast" })
+                {
+                    int layer = LayerMask.NameToLayer(layerName);
+                    if (layer >= 0)
+                        _nonWorldLayers |= 1 << layer;
+                }
+            }
+
+            return (cam.cullingMask & ~_nonWorldLayers) == 0;
+        }
+
+        /// <summary>True for the eye cameras created by <see cref="StereoRender"/>.</summary>
+        private static bool IsVRRigCamera(Camera cam)
+        {
+            var stereo = StereoRender.Instance;
+            if (stereo == null)
+                return false;
+
+            return cam == stereo.LeftCam || cam == stereo.RightCam;
         }
 
         /// <summary>

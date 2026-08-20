@@ -141,6 +141,10 @@ namespace SonsVRMod
             var mouse = Mouse.current;
             if (mouse == null) return;
 
+            // While a menu is up, the cursor belongs to it: it is both moving the pointer and using
+            // the left trigger as the button. Writing buttons here as well would fight it.
+            if (VRMenu.Active) return;
+
             // Read trigger states (digital press detection)
             bool triggerRight = NativeVRInput.GetBoolean("TriggerRight_Press");   // Attack/fire
             bool triggerLeft = NativeVRInput.GetBoolean("TriggerLeft_Press");     // Aim/block

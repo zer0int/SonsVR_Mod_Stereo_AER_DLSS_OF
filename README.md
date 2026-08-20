@@ -8,18 +8,48 @@ Built with **MelonLoader**, **Il2CppInterop**, and **SteamVR Plugin**, it replac
 
 ---
 
-## ✅ Current Features (0.0.2 Alpha)
+## ✅ Current Features (0.0.3 Alpha)
 
 - **Full Stereo Rendering**  
-  Custom left/right eye cameras with OpenVR projection matrices, dynamic resolution scaling, and native texture submission to the compositor.
+  Dedicated left/right eye cameras driven by the headset's own geometry: per-eye offsets and projection
+  matrices read from OpenVR, render targets sized from the runtime's recommendation, and native texture
+  submission to the compositor at end of frame.  
+  The eye cameras mirror the render configuration of the active game camera, including HDRP volumes and
+  post-processing, so the VR view matches what the flat view would show.
+
+- **Full 6DoF Head Tracking**  
+  Position as well as rotation, measured from a neutral pose captured at scene start and clamped so the
+  view cannot drift off the character's head.
 
 - **VR Locomotion & Movement**
     - Left thumbstick: walk forward/backward, strafe left/right
     - Right thumbstick **forward**: toggle sprint
-    - Smooth body rotation aligned to HMD direction (look where you go)
+    - The character turns with the head while moving, and stays put while you simply look around
+
+- **Real Body Turn Detection**  
+  The two controllers stand in for the shoulders: when the line between them turns with the head, the
+  player has turned their whole body in the room and the character follows. A glance over the shoulder
+  leaves the character alone, which also keeps scripted animations intact.
 
 - **Snap Turning**  
   Rotate your view in fixed increments (default: 30°) using the **right thumbstick (left/right)** — reduces motion sickness.
+
+- **Menus and Inventory in World Space**  
+  Flat menus are moved onto a panel anchored in the room rather than pinned to the head, pointed at with
+  the left thumbstick and clicked with the left trigger. The inventory is presented on the ground in
+  front of the player, with the pointer driven by gaze.
+
+- **Cutscene and Menu Awareness**  
+  Outside of gameplay the game keeps its own camera: the rig follows it instead of steering it, head
+  movement never reaches the character, and gameplay input is not injected into menus.
+
+- **Configurable at Runtime**  
+  Every tunable value lives in `UserData/MelonPreferences.cfg` under `[SonsVR]` — resolution scale, field
+  of view, comfort settings, menu placement, and the diagnostics below. No rebuild needed.
+
+- **Built-in Diagnostics**  
+  A frame profiler that separates the mod's own cost from time spent waiting on the compositor, a camera
+  census, and a watchdog that reports where the main thread stopped if the game ever locks up.
 
 - **Gesture-Based Actions**
     - **Jump**: Raise both controllers quickly upward
@@ -101,9 +131,48 @@ Built with **MelonLoader**, **Il2CppInterop**, and **SteamVR Plugin**, it replac
 
 ---
 
-## 🛠 Configuration (Future)
+## 🛠 Configuration
 
-All settings (IPD, snap angle, offsets, sensitivity) are currently hardcoded. A `settings.ini` file will be added soon for easy user customization.
+Settings live in `SonsOfTheForest/UserData/MelonPreferences.cfg`, section `[SonsVR]`, written on first
+launch. Edit between sessions; values in the file win over the defaults in code.
+
+The ones worth knowing:
+
+| Setting | Default | What it does |
+|---|---|---|
+| `RenderScale` | `0.70` | Multiplier on the eye resolution SteamVR asks for. Lower is faster and softer. |
+| `FovTangentHorizontal` / `FovTangentVertical` | `1.0` | Render less than the full field of view. `0.90` / `0.86` drops the outer edge, where the lens shows little, and saves roughly a quarter of the pixels. Push too far and a black border becomes visible. |
+| `DesktopMirror` | `false` | Strip the game camera and show the left eye on the monitor instead. Removes a whole render pass. |
+| `PositionalTrackingRange` | `0.30` | How far in metres the view may move off the character's head. `0` pins it. |
+| `MenuInWorldSpace` | `true` | Put flat menus on a panel in the room so they can be seen in the headset. |
+| `MenuHeightOffset` | `0.50` | Raises the viewpoint while a menu is open, so it is not read from inside the scenery. |
+| `InventoryLift` | `0.15` | Clearance kept above the ground, so inventory items do not sink into snow or tall grass. |
+| `Profile` | `true` | Report per-frame cost to the MelonLoader log. |
+
+Every switch is documented in the file itself.
+
+---
+
+## 🔨 Building
+
+The project references the IL2CPP assemblies of an installed, MelonLoader-patched copy of the game.
+Those are not, and must not be, part of this repository.
+
+Two properties at the top of `SonsVR_Mod.csproj` point at them:
+
+| Property | Meaning |
+|---|---|
+| `RefDir` | Install whose `MelonLoader` folder provides the reference assemblies |
+| `GameDir` | Playable install the built mod is copied into |
+
+They may be the same directory. Override without editing the file:
+
+```
+dotnet build -p:GameDir="D:\Games\Sons Of The Forest"
+```
+
+A missing or wrong `RefDir` fails the build with a readable message rather than several hundred
+"type not found" errors.
 
 ---
 
@@ -111,14 +180,16 @@ All settings (IPD, snap angle, offsets, sensitivity) are currently hardcoded. A 
 
 ### Planned Features & Fixes
 
-- ✅ **Add `settings.ini`**  
-  Export all hardcoded values (position offset, snap angle, thresholds, etc.) to an external config file.
+- ✅ **External configuration** — done, via MelonPreferences.
 
-- 🔧 **Fix Camera & Position Handling**  
-  Improve detection and switching logic for dynamic cameras (vehicles, cutscenes, UI scenes).
+- ✅ **Camera & position handling** — done. Camera selection now judges what a camera *draws*, not where it
+  lives: cameras rendering nothing, or only interface layers, are skipped, which covers loading screens
+  and overlays. Cutscene and menu cameras are followed rather than steered.
 
-- 🎮 **User Interface & In-Game Menus**  
-  Add VR-native menus for settings, comfort options (snap turn toggle, smooth turn), and inventory navigation.
+- ✅ **UI in VR** — done for menus, options and inventory, on world-anchored panels.
+
+- 🎮 **VR-native settings menu**  
+  Comfort options exposed in the headset rather than in a text file.
 
 - 🕹 **Implement Missing Game Actions**  
   Map critical gameplay actions (e.g., building, crafting, weapon switching, context actions) to motion controller inputs.
@@ -127,11 +198,18 @@ All settings (IPD, snap angle, offsets, sensitivity) are currently hardcoded. A 
   Implement inverse kinematics for arms/hands to match real-world controller poses (not just camera rotation).
 
 - ⚡ **Optimize Stereo Rendering Pipeline**  
-  Improve performance via:
-    - Single-pass stereo (if feasible)
-    - Dynamic resolution scaling
-    - Render texture reuse
-    - Async reprojection hints
+  Measurement so far: the mod's own code costs around 0.35 ms of a 20 ms frame, so the budget is spent in
+  the engine rendering two extra cameras, not in managed code. What has helped, in order:
+    - Neutralising the game camera and mirroring an eye to the desktop instead
+    - Field of view tangents, dropping the outer edge the lens barely shows
+    - Turning off per-eye effects that make no sense in a headset: motion blur, depth of field, screen
+      space reflections
+  
+  Still open:
+    - Shadow cost per eye, the largest remaining per-camera item
+    - The hidden area mesh the runtime provides, for the corners the lens never shows
+    - Single-pass stereo, which needs native XR and is not available: the provider has to be present at
+      build time and cannot be added to a shipped game
 
 ### Additional Suggested Improvements
 
@@ -154,10 +232,15 @@ All settings (IPD, snap angle, offsets, sensitivity) are currently hardcoded. A 
 
 ## ⚠️ Known Limitations
 
-- **No official VR support**: Some UI elements may appear on-screen (not in VR space).
 - **Weapon/Tool alignment**: Held items are not yet aligned to hand poses (6DOF).
-- **Cutscenes & Vehicles**: May break immersion or camera tracking (WIP).
-- **Performance**: Render resolution is high by default; may require supersampling adjustment in SteamVR.
+- **Screen space interface**: menus and the inventory are handled, but individual overlays the game draws
+  straight to the screen can still be missing from the headset.
+- **Cutscenes**: the view follows the position of the cutscene camera but takes its heading from the
+  headset, so the framing a cutscene intended is not always what the player is looking at. This is
+  deliberate — inheriting a tumbling camera is the fastest way to make someone ill.
+- **Performance**: two full render passes per frame. Native single-pass stereo is not reachable from a
+  mod on a shipped build; see the roadmap for what has been done instead.
+- **No official VR support**: everything here is injected into a game that has no VR mode.
 
 ---
 
