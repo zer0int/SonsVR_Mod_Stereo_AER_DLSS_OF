@@ -1,4 +1,4 @@
-namespace SonsVRMod
+﻿namespace SonsVRMod
 {
     /// <summary>
     /// What this build calls itself.
@@ -18,7 +18,7 @@ namespace SonsVRMod
         /// The release this build corresponds to. Must be a constant: it is used as an attribute
         /// argument, which the compiler needs to resolve at build time.
         /// </summary>
-        public const string Version = "0.0.4-alpha";
+        public const string Version = "0.0.5-alpha";
 
         public const string Name = "SonsVR_Mod";
 

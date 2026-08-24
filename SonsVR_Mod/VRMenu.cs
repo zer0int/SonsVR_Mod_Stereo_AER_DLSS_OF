@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using MelonLoader;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -37,6 +37,9 @@ namespace SonsVRMod
         private readonly System.Collections.Generic.HashSet<string> _reportedNested =
             new System.Collections.Generic.HashSet<string>();
 
+        private readonly System.Collections.Generic.HashSet<string> _reportedOverlay =
+            new System.Collections.Generic.HashSet<string>();
+
         private readonly VRUiToolkit _uiToolkit = new VRUiToolkit();
         private readonly VRLaser _laser = new VRLaser();
         private Canvas _primary;
@@ -46,6 +49,7 @@ namespace SonsVRMod
         private bool _lastClick;
         private int _scanCountdown;
         private bool _panelPlaced;
+        private bool _hudAdopted;
         private Camera _eyeCamera;
         private Vector3 _panelPosition;
         private Quaternion _panelRotation = Quaternion.identity;
@@ -81,19 +85,6 @@ namespace SonsVRMod
                 ScanForMenus(eyeCamera);
             }
 
-            // A menu session continues across menu changes.
-            //
-            // Swapping one screen for another destroys the old canvases before the new ones are
-            // found, and for those few frames there is no primary. Treating that gap as "the menus
-            // are gone" threw the anchor away, so each screen re-anchored in front of wherever the
-            // player happened to be looking: the menus appeared to orbit the head instead of
-            // standing still. The anchor only goes when gameplay actually resumes.
-            if (_primary == null && !_panelPlaced)
-            {
-                Deactivate();
-                return;
-            }
-
             Active = true;
             _eyeCamera = eyeCamera;
             VRLaser.UpdateHandSwitch();
@@ -102,8 +93,26 @@ namespace SonsVRMod
 
             // The options screen and its like are built with UI Toolkit rather than canvases, so they
             // need their own treatment; they share the panel position so everything lines up.
+            //
+            // Run before the check below, not after it. The pause screen is UI Toolkit and brings no
+            // canvas of its own, so a session that gives up on finding a canvas first never reaches
+            // the capture that would have found the screen, and the screen it was looking for stays
+            // out of the headset for good.
             if (VRConfig.MenuUiToolkit)
                 _uiToolkit.Update(_panelPosition, _panelRotation);
+
+            // A menu session continues across menu changes.
+            //
+            // Swapping one screen for another destroys the old canvases before the new ones are
+            // found, and for those few frames there is no primary. Treating that gap as "the menus
+            // are gone" threw the anchor away, so each screen re-anchored in front of wherever the
+            // player happened to be looking: the menus appeared to orbit the head instead of
+            // standing still. The anchor only goes when gameplay actually resumes.
+            if (_primary == null && !_panelPlaced && !_uiToolkit.HasContent)
+            {
+                Deactivate();
+                return;
+            }
 
             MoveCursor();
             SendPointer(eyeCamera);
@@ -116,6 +125,9 @@ namespace SonsVRMod
 
             // Next time a menu comes up it gets anchored afresh, wherever the player is looking then.
             _panelPlaced = false;
+
+            // The display canvas goes back to the display, so the next menu has to take it again.
+            _hudAdopted = false;
         }
 
         /// <summary>
@@ -176,6 +188,18 @@ namespace SonsVRMod
                 if (canvas.renderMode == RenderMode.WorldSpace)
                     continue;
 
+                // The performance overlay is not part of the game's interface and is never something
+                // to point at, but it is a full screen canvas and so competes with the menus for the
+                // pointer, and wins on size. Left on the screen it stays out of the headset, which is
+                // where a debug overlay belongs.
+                if (IsOverlay(canvas))
+                {
+                    if (_reportedOverlay.Add(canvas.name))
+                        MelonLogger.Msg($"[VRMenu] '{canvas.name}' left alone: a debug overlay, not a menu");
+
+                    continue;
+                }
+
                 // Only top level canvases: a nested one takes its mode from its root, so converting
                 // the root is enough. Reported, because a canvas that never gets converted and never
                 // says why is exactly how the options screen stayed on the monitor unnoticed.
@@ -190,7 +214,64 @@ namespace SonsVRMod
                 Convert(canvas, eyeCamera);
             }
 
+            AdoptHudCanvas(eyeCamera);
             ChoosePrimary();
+        }
+
+        /// <summary>
+        /// Takes the canvas the game draws its display on into the menu panel.
+        /// <para>
+        /// The pause and save screens are children of it, and the mod had already moved it into world
+        /// space itself, for the display. That is exactly why the scan above never picked it up: it
+        /// only looks at canvases still being drawn to the screen, and this one had already been
+        /// taken. The screens were visible and unreachable, riding on a surface locked to the head,
+        /// so the beam was tested against a panel somewhere else entirely and passed through the menu
+        /// the player was aiming at.
+        /// </para>
+        /// <para>
+        /// Nothing is saved to be restored afterwards. The display code re-applies its own scale and
+        /// position every frame, so it takes the canvas back on its own the moment the menu closes.
+        /// </para>
+        /// </summary>
+        private void AdoptHudCanvas(Camera eyeCamera)
+        {
+            VRPlayer player = VRPlayer.Instance;
+            if (player == null)
+                return;
+
+            Canvas hud = player.HudCanvas;
+            if (hud == null || !hud.isActiveAndEnabled)
+                return;
+
+            // Everything below is re-applied on every scan rather than once when the canvas is first
+            // seen. The display takes the canvas back the moment a menu closes: its own scale, its
+            // own place and its own event camera. A second menu then inherits a canvas that is still
+            // in the list, so it is still anchored where the panel is and the pointer still moves
+            // correctly across it, while its raycasts go through the game's camera instead of the
+            // eye. Every click lands somewhere else and nothing about the picture looks wrong.
+            if (hud.worldCamera != eyeCamera)
+                hud.worldCamera = eyeCamera;
+
+            var rect = hud.GetComponent<RectTransform>();
+            Vector2 size = rect != null ? rect.ResolvedSize() : Vector2.zero;
+
+            if (size.y > 1f)
+                hud.transform.localScale = Vector3.one * (VRConfig.MenuHeight / size.y);
+
+            if (_panelPlaced)
+                hud.transform.SetPositionAndRotation(_panelPosition, _panelRotation);
+
+            if (!_converted.Contains(hud))
+                _converted.Add(hud);
+
+            if (_hudAdopted)
+                return;
+
+            _hudAdopted = true;
+
+            MelonLogger.Msg($"[VRMenu] '{hud.name}' taken over from the display for the menu " +
+                            $"({size.x:F0}x{size.y:F0} px, scale {hud.transform.localScale.x:F4}, " +
+                            $"event camera '{eyeCamera.name}')");
         }
 
         private void Convert(Canvas canvas, Camera eyeCamera)
@@ -205,9 +286,7 @@ namespace SonsVRMod
             // The resolved size, not sizeDelta. A full screen canvas is normally anchored stretched,
             // and then sizeDelta is zero while the real size lives in the resolved rect. Measuring the
             // wrong one made this bail out silently on exactly the canvases that matter most.
-            Vector2 size = rect.rect.size;
-            if (size.y <= 1f)
-                size = rect.sizeDelta;
+            Vector2 size = rect.ResolvedSize();
 
             if (size.y <= 1f)
             {
@@ -218,6 +297,7 @@ namespace SonsVRMod
 
             canvas.renderMode = RenderMode.WorldSpace;
             canvas.worldCamera = eyeCamera;
+            EnsureVisibleLayer(canvas, eyeCamera);
 
             // A canvas measures itself in pixels. Scaling by the height it should occupy in metres
             // turns those pixels into a panel of a sensible physical size.
@@ -238,6 +318,51 @@ namespace SonsVRMod
         }
 
         /// <summary>
+        /// Moves a panel onto a layer the eye cameras actually draw.
+        /// <para>
+        /// The eye cameras take their culling mask from the game's camera, and in play that camera
+        /// leaves out the interface layer: it has no reason to draw a screen space canvas, since one
+        /// is painted straight onto the output image without passing through any camera at all. Move
+        /// that same canvas into world space and it is suddenly something a camera has to draw, on a
+        /// layer that camera was told to ignore.
+        /// </para>
+        /// <para>
+        /// The result is a panel that is present, laid out, lit and fully answering the pointer, and
+        /// invisible. That is the worst shape this fault can take: the beam lands on it, the log
+        /// reports controls under the cursor, and the player is aiming at a screen they cannot see.
+        /// </para>
+        /// <para>
+        /// Read from the mask rather than written as a fixed layer, so a canvas already on a layer
+        /// being drawn is left exactly as the game had it. At the title screen the camera draws
+        /// everything and this does nothing at all, which is why the menus there always worked.
+        /// </para>
+        /// </summary>
+        private void EnsureVisibleLayer(Canvas canvas, Camera eyeCamera)
+        {
+            if (canvas == null || eyeCamera == null)
+                return;
+
+            GameObject go = canvas.gameObject;
+            int mask = eyeCamera.cullingMask;
+
+            if ((mask & (1 << go.layer)) != 0)
+                return;
+
+            int was = go.layer;
+            go.layer = 0;
+
+            if (_movedLayers.Add(canvas.name))
+            {
+                MelonLogger.Msg($"[VRMenu] '{canvas.name}' moved from layer {was} to layer 0: " +
+                                $"the eye cameras do not draw layer {was} " +
+                                $"(mask 0x{mask:X8}), so the panel was invisible");
+            }
+        }
+
+        private readonly System.Collections.Generic.HashSet<string> _movedLayers =
+            new System.Collections.Generic.HashSet<string>();
+
+        /// <summary>
         /// Picks the canvas the cursor lives on: the one with the most things to click.
         /// <para>
         /// Sorting order was the wrong measure. It picked whichever canvas happened to be drawn last,
@@ -245,38 +370,47 @@ namespace SonsVRMod
         /// cursor lived on a panel the player had no reason to look at. What identifies the menu is
         /// that it is the one carrying the buttons.
         /// </para>
+        /// <para>
+        /// Size was the wrong tie break for the case where nothing carries a Unity control, which is
+        /// what the pause screen looks like from here: every canvas counted zero and the biggest one
+        /// won, so the pointer went to a full screen overlay while the menu beside it stayed dead.
+        /// Counting what a pointer could actually land on separates them, since a menu is built out
+        /// of things meant to be hit and an overlay is not. Size decides only when even that ties.
+        /// </para>
         /// </summary>
         private void ChoosePrimary()
         {
             Canvas best = null;
             int bestCount = -1;
+            int bestTargets = -1;
+            float bestArea = -1f;
 
             foreach (var canvas in _converted)
             {
                 if (canvas == null || !canvas.isActiveAndEnabled)
                     continue;
 
-                // Most controls wins, and with none anywhere the largest panel does: on this game
-                // the entries are custom components, so a canvas counting zero can still be the menu.
                 int count = CountClickable(canvas);
-                if (count == 0 && bestCount <= 0)
-                {
-                    var rect = canvas.GetComponent<RectTransform>();
-                    if (best == null || (rect != null && rect.rect.size.sqrMagnitude >
-                                         best.GetComponent<RectTransform>().rect.size.sqrMagnitude))
-                        best = canvas;
+                int targets = CountRaycastTargets(canvas);
 
+                var rect = canvas.GetComponent<RectTransform>();
+                float area = rect != null ? rect.rect.size.sqrMagnitude : 0f;
+
+                bool better = count > bestCount
+                              || (count == bestCount && targets > bestTargets)
+                              || (count == bestCount && targets == bestTargets && area > bestArea);
+
+                if (!better)
                     continue;
-                }
 
-                if (count > bestCount)
-                {
-                    bestCount = count;
-                    best = canvas;
-                }
+                best = canvas;
+                bestCount = count;
+                bestTargets = targets;
+                bestArea = area;
             }
 
             bestCount = Mathf.Max(bestCount, 0);
+            bestTargets = Mathf.Max(bestTargets, 0);
 
             if (best == _primary)
                 return;
@@ -289,10 +423,30 @@ namespace SonsVRMod
             // being drawn, which left a dead cursor behind on every click.
             DestroyCursor();
 
+            // Every candidate and what it scored, because the choice between them is a judgement made
+            // from counts and the counts are the only way to see why it went the way it did.
+            foreach (var canvas in _converted)
+            {
+                if (canvas == null || !canvas.isActiveAndEnabled)
+                    continue;
+
+                var candidate = canvas.GetComponent<RectTransform>();
+                Vector2 size = candidate != null ? candidate.ResolvedSize() : Vector2.zero;
+
+                MelonLogger.Msg($"[VRMenu]   candidate '{canvas.name}': " +
+                                $"{CountClickable(canvas)} controls, " +
+                                $"{CountRaycastTargets(canvas)} hittable, " +
+                                $"{size.x:F0}x{size.y:F0} px, holds {Children(canvas.transform)}" +
+                                $"{(canvas == _primary ? "  <- chosen" : string.Empty)}");
+            }
+
+            ReportControls();
+
             if (_primary != null)
             {
                 _cursorPosition = Vector2.zero;
-                MelonLogger.Msg($"[VRMenu] Pointer attached to '{_primary.name}' ({bestCount} clickable elements)");
+                MelonLogger.Msg($"[VRMenu] Pointer attached to '{_primary.name}' " +
+                                $"({bestCount} controls, {bestTargets} things a pointer can hit)");
             }
         }
 
@@ -328,8 +482,17 @@ namespace SonsVRMod
                 _panelRotation = Quaternion.LookRotation(forward, Vector3.up);
                 _panelPlaced = true;
 
+                // Reported against the eyes rather than against the world, because where the panel
+                // is in the world says nothing about whether it can be pointed at, and where it is
+                // relative to the head says everything.
+                float above = _panelPosition.y - head.position.y;
+
                 MelonLogger.Msg($"[VRMenu] Panel anchored at {_panelPosition}, " +
-                                $"facing {_panelRotation.eulerAngles.y:F0} degrees");
+                                $"facing {_panelRotation.eulerAngles.y:F0} degrees, " +
+                                $"centre {above:+0.00;-0.00} m from the eyes, " +
+                                $"{VRConfig.MenuHeight:F2} m tall at {VRConfig.MenuDistance:F2} m, " +
+                                $"so it spans {above - VRConfig.MenuHeight * 0.5f:+0.00;-0.00} to " +
+                                $"{above + VRConfig.MenuHeight * 0.5f:+0.00;-0.00} m");
             }
 
             // Re-applied every frame, not written once. These canvases hang off objects that move
@@ -348,9 +511,20 @@ namespace SonsVRMod
                 if (canvas.renderMode != RenderMode.WorldSpace)
                 {
                     canvas.renderMode = RenderMode.WorldSpace;
-                    canvas.worldCamera = _eyeCamera;
                     _revertCount++;
                 }
+
+                // Held every frame alongside the pose, because it is just as easy to lose and far
+                // harder to notice. A canvas raycasts through the camera named here, so one that has
+                // been pointed back at the game's camera stays exactly where it should be, draws
+                // exactly as it should, and quietly answers every click with a miss.
+                if (canvas.worldCamera != _eyeCamera)
+                {
+                    canvas.worldCamera = _eyeCamera;
+                    _cameraResetCount++;
+                }
+
+                EnsureVisibleLayer(canvas, _eyeCamera);
 
                 canvas.transform.SetPositionAndRotation(_panelPosition, _panelRotation);
             }
@@ -359,6 +533,7 @@ namespace SonsVRMod
         }
 
         private int _revertCount;
+        private int _cameraResetCount;
         private int _healthCountdown;
 
         /// <summary>
@@ -377,25 +552,42 @@ namespace SonsVRMod
             float turn = Quaternion.Angle(_primary.transform.rotation, _panelRotation);
 
             MelonLogger.Msg($"[VRMenu] '{_primary.name}' mode {_primary.renderMode}, " +
-                            $"reverted {_revertCount} times, " +
+                            $"camera '{(_primary.worldCamera != null ? _primary.worldCamera.name : "none")}', " +
+                            $"reverted {_revertCount} times, camera put back {_cameraResetCount} times, " +
                             $"off anchor by {drift:F2} m and {turn:F0} degrees");
 
             _revertCount = 0;
+            _cameraResetCount = 0;
         }
+
+        /// <summary>
+        /// The surface the pointer lives on.
+        /// <para>
+        /// The menu canvas when there is one, and otherwise the surface the UI Toolkit screens are
+        /// shown on. The pause screen is UI Toolkit and brings no canvas at all, so with only the
+        /// first choice there was nothing for the beam to land on: it passed straight through the
+        /// screen it was aimed at, no cursor was drawn, and no pointer was reported. The screen was
+        /// visible and dead.
+        /// </para>
+        /// </summary>
+        private RectTransform PointerRect => _primaryRect != null
+            ? _primaryRect
+            : _uiToolkit.SurfaceRect;
 
         /// <summary>
         /// Moves the cursor across the panel with the left stick, kept inside its edges.
         /// </summary>
         private void MoveCursor()
         {
-            if (_primaryRect == null)
+            RectTransform host = PointerRect;
+            if (host == null)
                 return;
 
             // Aiming a controller at the panel wins over steering a cursor across it.
-            if (_laser.TryAim(_primaryRect, out Vector2 aimed))
+            if (_laser.TryAim(host, out Vector2 aimed))
             {
                 _cursorPosition = aimed;
-                EnsureCursorVisual();
+                EnsureCursorVisual(host);
 
                 if (_cursorRect != null)
                     _cursorRect.anchoredPosition = _cursorPosition;
@@ -407,11 +599,11 @@ namespace SonsVRMod
 
             _cursorPosition += stick * VRConfig.MenuCursorSpeed * Time.unscaledDeltaTime;
 
-            Vector2 half = _primaryRect.sizeDelta * 0.5f;
+            Vector2 half = host.ResolvedSize() * 0.5f;
             _cursorPosition.x = Mathf.Clamp(_cursorPosition.x, -half.x, half.x);
             _cursorPosition.y = Mathf.Clamp(_cursorPosition.y, -half.y, half.y);
 
-            EnsureCursorVisual();
+            EnsureCursorVisual(host);
 
             if (_cursorRect != null)
                 _cursorRect.anchoredPosition = _cursorPosition;
@@ -452,7 +644,96 @@ namespace SonsVRMod
             return canvas.GetComponentsInChildren<Selectable>(false).Length;
         }
 
+        /// <summary>
+        /// Where the controls of the chosen panel are, in the very coordinates the cursor is reported
+        /// in.
+        /// <para>
+        /// "The button was not clickable" and "the pointer was not on the button" look identical from
+        /// inside a headset, and the log could not tell them apart either: it said what was under the
+        /// pointer, which is nothing useful when the answer is a background. Written in the panel's
+        /// own space, a control's position sits next to the cursor position in the same units, and
+        /// the two can simply be compared.
+        /// </para>
+        /// </summary>
+        private void ReportControls()
+        {
+            if (_primaryRect == null || _primary == null)
+                return;
+
+            var controls = _primary.GetComponentsInChildren<Selectable>(false);
+            if (controls.Length == 0)
+            {
+                MelonLogger.Msg($"[VRMenu]   '{_primary.name}' carries no controls at all");
+                return;
+            }
+
+            int listed = 0;
+
+            foreach (var control in controls)
+            {
+                if (control == null || listed++ >= 12)
+                    continue;
+
+                Vector3 local = _primaryRect.InverseTransformPoint(control.transform.position);
+
+                MelonLogger.Msg($"[VRMenu]   control '{control.name}' at " +
+                                $"({local.x:F0}, {local.y:F0}) px, " +
+                                $"{(control.interactable ? "live" : "not interactable")}, " +
+                                $"{(control.isActiveAndEnabled ? "on" : "off")}");
+            }
+
+            if (controls.Length > listed)
+                MelonLogger.Msg($"[VRMenu]   ... and {controls.Length - listed} more controls");
+        }
+
+        /// <summary>
+        /// The names of what a canvas carries directly. A canvas counting nothing hittable is either
+        /// empty or full of things that refuse the pointer, and only its contents say which; without
+        /// them a menu that never gets picked cannot even be identified in the log.
+        /// </summary>
+        private static string Children(Transform parent)
+        {
+            int count = parent.childCount;
+            if (count == 0)
+                return "nothing";
+
+            string names = string.Empty;
+
+            for (int i = 0; i < count && i < 4; i++)
+                names += $"{(i > 0 ? ", " : string.Empty)}'{parent.GetChild(i).name}'";
+
+            return count > 4 ? $"{count}: {names}, ..." : $"{count}: {names}";
+        }
+
+        /// <summary>
+        /// How many drawn things on this canvas a pointer is allowed to land on. A menu is built out
+        /// of them; an overlay that only reports numbers is not.
+        /// </summary>
+        private static int CountRaycastTargets(Canvas canvas)
+        {
+            int count = 0;
+
+            foreach (var graphic in canvas.GetComponentsInChildren<Graphic>(false))
+            {
+                if (graphic != null && graphic.raycastTarget)
+                    count++;
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// Whether this canvas is a debug overlay rather than part of the game's interface. Matched
+        /// by name because that is what it is: a third party component dropped into the build, with
+        /// nothing about it to recognise it by other than what it calls itself.
+        /// </summary>
+        private static bool IsOverlay(Canvas canvas)
+        {
+            return canvas.name.StartsWith("[Graphy]");
+        }
+
         private GameObject _cursorObject;
+        private Transform _cursorHost;
 
         /// <summary>Removes the cursor marker, so it cannot outlive the menu it was drawn on.</summary>
         private void DestroyCursor()
@@ -461,6 +742,7 @@ namespace SonsVRMod
                 UnityEngine.Object.Destroy(_cursorObject);
 
             _cursorObject = null;
+            _cursorHost = null;
             _cursorRect = null;
         }
 
@@ -495,14 +777,65 @@ namespace SonsVRMod
                    NativeVRInput.GetBoolean("TriggerRight_Press");
         }
 
-        /// <summary>A small marker on the panel, so the player can see where they are pointing.</summary>
-        private void EnsureCursorVisual()
+        /// <summary>
+        /// Writes down what the interface itself finds under the pointer when a click is made.
+        /// <para>
+        /// A click that does nothing has two explanations that look identical from outside: the
+        /// pointer is not where we believe it is, or it is exactly right and something invisible is
+        /// standing in front of the menu and taking the press. Asking the interface what it hits, at
+        /// the very position the click was sent at, tells the two apart.
+        /// </para>
+        /// </summary>
+        private static void ReportRaycast(Vector2 screen)
         {
-            if (_cursorRect != null || _primary == null)
+            var system = EventSystem.current;
+            if (system == null)
+            {
+                MelonLogger.Msg("[VRMenu] no event system to ask what is under the pointer");
+                return;
+            }
+
+            var data = new PointerEventData(system) { position = screen };
+            var results = new Il2CppSystem.Collections.Generic.List<RaycastResult>();
+
+            system.RaycastAll(data, results);
+
+            if (results.Count == 0)
+            {
+                MelonLogger.Msg($"[VRMenu] nothing under the pointer at {screen}");
+                return;
+            }
+
+            string found = string.Empty;
+
+            for (int i = 0; i < results.Count && i < 3; i++)
+            {
+                RaycastResult result = results[i];
+                string target = result.gameObject != null ? result.gameObject.name : "nothing";
+                string raycaster = result.module != null ? result.module.name : "unknown";
+
+                found += $"{(i > 0 ? ", " : string.Empty)}'{target}' through '{raycaster}'";
+            }
+
+            MelonLogger.Msg($"[VRMenu] under the pointer at {screen}: {found} ({results.Count} in all)");
+        }
+
+        /// <summary>
+        /// A small marker on the panel, so the player can see where they are pointing. Rebuilt when
+        /// the pointer moves to a different surface, since it is drawn as a child of that surface.
+        /// </summary>
+        private void EnsureCursorVisual(RectTransform host)
+        {
+            if (host == null)
                 return;
 
+            if (_cursorRect != null && _cursorHost == host.transform)
+                return;
+
+            DestroyCursor();
+
             var go = new GameObject("VRMenuCursor");
-            go.transform.SetParent(_primary.transform, false);
+            go.transform.SetParent(host.transform, false);
 
             var image = go.AddComponent<Image>();
             image.sprite = VRLaser.CircleSprite();
@@ -510,7 +843,12 @@ namespace SonsVRMod
             image.raycastTarget = false;
 
             _cursorObject = go;
+            _cursorHost = host.transform;
             _cursorRect = go.GetComponent<RectTransform>();
+
+            MelonLogger.Msg($"[VRMenu] Cursor drawn on '{host.name}' " +
+                            $"({host.sizeDelta.x:F0}x{host.sizeDelta.y:F0} px), " +
+                            $"UI Toolkit content {_uiToolkit.HasContent}");
             _cursorRect.sizeDelta = new Vector2(VRConfig.MenuCursorSize, VRConfig.MenuCursorSize);
             _cursorRect.anchorMin = new Vector2(0.5f, 0.5f);
             _cursorRect.anchorMax = new Vector2(0.5f, 0.5f);
@@ -527,11 +865,20 @@ namespace SonsVRMod
         /// </summary>
         private void SendPointer(Camera eyeCamera)
         {
+            RectTransform host = PointerRect;
+
             var mouse = Mouse.current;
-            if (mouse == null || _primaryRect == null)
+            if (mouse == null || host == null)
                 return;
 
-            Vector3 world = _primaryRect.TransformPoint(_cursorPosition);
+            Vector3 world = host.TransformPoint(_cursorPosition);
+
+            // A UI Toolkit screen is told where the pointer is in its own terms. The mouse position
+            // below still has to be sent, because that is what makes the runtime handle a pointer
+            // event at all, but the position it carries means nothing to a screen drawn into a
+            // texture: the panel takes the point from here instead.
+            _uiToolkit.SetPointer(world);
+
             Vector3 screen = eyeCamera.WorldToScreenPoint(world);
 
             if (screen.z <= 0f)
@@ -548,6 +895,9 @@ namespace SonsVRMod
             {
                 _lastClick = click;
                 MelonLogger.Msg($"[VRMenu] Trigger {(click ? "pressed" : "released")} at {_cursorPosition}");
+
+                if (click)
+                    ReportRaycast(new Vector2(screen.x, screen.y));
             }
         }
     }

@@ -289,6 +289,9 @@ namespace SonsVRMod
         /// <summary>Shows the loading screen in the headset instead of freezing the view.</summary>
         private readonly VRLoadingScreen _loadingScreen = new VRLoadingScreen();
 
+        /// <summary>The beam that aims the inventory. Its own, so the menus keep theirs.</summary>
+        private readonly VRLaser _inventoryLaser = new VRLaser();
+
         /// <summary>Where the viewpoint was when a menu came up, and where it stays until it closes.</summary>
         private Vector3 _menuViewpoint;
         
@@ -561,10 +564,7 @@ namespace SonsVRMod
                 // looking at while the camera sits on the head. Parked where the game puts it, above
                 // the item plane, the pointer projects somewhere unrelated and selects nothing.
                 if (VRConfig.DriveInventoryCamera)
-                {
-                    UsedCamera.transform.SetPositionAndRotation(
-                        StereoRender.Head.position, StereoRender.Head.rotation);
-                }
+                    AimInventoryCamera();
 
                 LogInventoryDrift();
                 return;
@@ -612,10 +612,18 @@ namespace SonsVRMod
                 return;
             }
 
-            // Back in the world: no menu to point at, so the mouse goes to whoever else wants it.
-            // This belongs here and not earlier in the frame, where it ran unconditionally and threw
-            // the panel anchor away once per frame, leaving the menu pinned to the head after all.
-            _vrMenu.Release();
+            // The pause menu opens without the game taking the camera away, so the player is still
+            // in control and the branch above never runs. Handled here as well, or Escape would put
+            // up a menu that exists only on the monitor.
+            //
+            // Calling it every frame of play costs nothing: it decides for itself whether a menu is
+            // up, by whether the pointer has been released, and lets go again when it has not. That
+            // is also what keeps this from throwing the panel anchor away once a frame, which is the
+            // mistake that once left the menus pinned to the head.
+            if (VRConfig.MenuInWorldSpace)
+                _vrMenu.Update(StereoRender.Head, StereoRender.LeftCam);
+            else
+                _vrMenu.Release();
 
             if (followAnchor)
             {
@@ -702,6 +710,16 @@ namespace SonsVRMod
         {
             // The settings panel is using the sticks to point at itself.
             if (_settingsPanel.IsOpen)
+                return;
+
+            // So is a game menu, now that they come up during play as well. Turning underneath one
+            // would swing the world behind a panel standing still in it.
+            if (VRMenu.Active)
+                return;
+
+            // The left grip hands the right stick to the thing being built. Turning as well would
+            // rotate the piece and the player together, which is the one thing neither wants.
+            if (VRConfig.BuildRotateWithGrip && NativeVRInput.GetBoolean("GripLeft_Press"))
                 return;
 
             Vector2 rightStick = NativeVRInput.GetVector2("ThumbstickRight");
@@ -1102,7 +1120,7 @@ namespace SonsVRMod
                 if (_cursorController != null && _cursorController != null)
                 {
                     FixInventoryCursorController();
-                    UpdateCursorPositionFromGaze();
+                    UpdateInventoryCursorPosition();
                     SetFakeGroundVisible(false);
                     ApplyInventoryLift();
                 }
@@ -1129,6 +1147,8 @@ namespace SonsVRMod
                 // Let the game place the layout from scratch the next time it opens.
                 _inventoryBaseKnown = false;
                 
+                _inventoryLaser.Hide();
+
                 if (_softwareCursor != null)
                 {
                     _softwareCursor.active = false;
@@ -1432,7 +1452,27 @@ namespace SonsVRMod
         /// </summary>
         private void UpdatePlayerVisibility()
         {
-            bool hide = VRConfig.HidePlayerInSettings && _settingsPanel.IsOpen;
+            // Two reasons to hide one body, held as a single state: whichever asks first hides it,
+            // and it returns when neither is asking. One flag because the renderers are one set, and
+            // two switches over the same set would let the second thing to close put back what the
+            // first still wants out of sight.
+            bool forSettings = VRConfig.HidePlayerInSettings && _settingsPanel.IsOpen;
+            bool forInventory = VRConfig.HidePlayerInInventory && InventoryCamIsActive;
+            bool hide = forSettings || forInventory;
+
+            // The pack is found a frame or two after the inventory opens, which can be after the
+            // list was taken. Taken without it, the list holds the pack's own renderers and hiding
+            // them empties the inventory, so it is taken again as soon as there is something to
+            // leave out of it.
+            if (hide && _playerHiddenForSettings && !_cacheExcludedInventory && _inventorySystem != null)
+            {
+                RestorePlayerRenderers();
+                _originalRendererStates = null;
+                HidePlayerRenderers();
+
+                MelonLogger.Msg("[VRPlayer] Hidden renderers listed again, now that the pack is known");
+                return;
+            }
 
             if (hide == _playerHiddenForSettings)
                 return;
@@ -1440,13 +1480,130 @@ namespace SonsVRMod
             _playerHiddenForSettings = hide;
 
             if (hide)
+            {
                 HidePlayerRenderers();
+            }
             else
+            {
                 RestorePlayerRenderers();
 
-            MelonLogger.Msg($"[VRPlayer] Character {(hide ? "hidden for the settings panel" : "visible again")}");
+                // Dropped rather than kept: the character is rebuilt between scenes, and a cache of
+                // renderers from a previous one restores nothing while quietly holding them alive.
+                _originalRendererStates = null;
+            }
+
+            string reason = forSettings ? "the settings panel" : "the inventory";
+            MelonLogger.Msg($"[VRPlayer] Character {(hide ? "hidden for " + reason : "visible again")}");
         }
 
+        /// <summary>
+        /// Points the inventory camera at whatever the player is pointing at.
+        /// <para>
+        /// Nothing the player sees comes from this camera: the eye cameras draw the scene, from the
+        /// head. It is aimed only because the game projects through it to work out which item lies
+        /// under the pointer, so where it looks is where the selection lands.
+        /// </para>
+        /// <para>
+        /// The head takes over when the beam is switched off or no controller is tracked, which is
+        /// the behaviour this replaces: workable, but it means choosing an item by facing it
+        /// squarely instead of by pointing at it.
+        /// </para>
+        /// </summary>
+        private void AimInventoryCamera()
+        {
+            Vector3 head = StereoRender.Head.position;
+
+            if (VRConfig.InventoryLaserPointing)
+            {
+                // The same gesture as on the menus: the trigger of the hand without the beam takes
+                // it. Kept in here so a left handed player can swap hands where they are, rather
+                // than leaving the inventory to do it. Both triggers still reach the game, since
+                // this only flips which hand the beam comes from.
+                if (VRConfig.InventoryLaserHandSwitch)
+                    VRLaser.UpdateHandSwitch();
+
+                if (_inventoryLaser.ShowRay(out Vector3 origin, out Vector3 direction) &&
+                    TryFindInventoryAim(origin, direction, out Vector3 target))
+                {
+                    // Turned towards where the beam lands, but left standing at the head.
+                    //
+                    // Moving the camera down to the hand as well seemed the obvious thing and is
+                    // wrong: this camera is what the game projects through to decide what is under
+                    // the pointer, and it was the head it was working from when that worked. A hand
+                    // held low starts the projection under the layout and at an angle across it.
+                    // So only the heading is taken from the beam.
+                    UsedCamera.transform.SetPositionAndRotation(
+                        head, Quaternion.LookRotation(target - head, Vector3.up));
+
+                    _inventoryAimPoint = target;
+                    _inventoryAimValid = true;
+
+                    LogInventoryAim(target);
+                    return;
+                }
+            }
+            else
+            {
+                _inventoryLaser.Hide();
+            }
+
+            _inventoryAimValid = false;
+            UsedCamera.transform.SetPositionAndRotation(head, StereoRender.Head.rotation);
+        }
+
+        /// <summary>Where the beam last met the inventory surface, and whether it did.</summary>
+        private Vector3 _inventoryAimPoint;
+        private bool _inventoryAimValid;
+
+        /// <summary>
+        /// Where the beam meets the surface the inventory is laid out on.
+        /// <para>
+        /// The contents lie flat, so the surface is a horizontal plane and the height is the one the
+        /// layout was placed at. Pointing above the horizon, or at a plane behind the player, gives
+        /// nothing, and the head takes the aim back.
+        /// </para>
+        /// </summary>
+        private bool TryFindInventoryAim(Vector3 origin, Vector3 direction, out Vector3 target)
+        {
+            target = Vector3.zero;
+
+            float height = _inventorySystem != null
+                ? _inventorySystem.transform.position.y
+                : (LocalPlayer != null ? LocalPlayer.transform.position.y : origin.y);
+
+            var plane = new Plane(Vector3.up, new Vector3(0f, height, 0f));
+            var ray = new Ray(origin, direction);
+
+            if (!plane.Raycast(ray, out float distance) || distance > VRConfig.LaserRange)
+                return false;
+
+            target = ray.GetPoint(distance);
+            return true;
+        }
+
+        private int _inventoryAimCountdown;
+
+        private void LogInventoryAim(Vector3 target)
+        {
+            if (--_inventoryAimCountdown > 0)
+                return;
+
+            _inventoryAimCountdown = 180;
+
+            MelonLogger.Msg($"[VRPlayer] Inventory aimed at {target}, camera at " +
+                            $"{UsedCamera.transform.position}, layout y " +
+                            $"{(_inventorySystem != null ? _inventorySystem.transform.position.y : 0f):F2}");
+        }
+
+        /// <summary>
+        /// Takes down the list of renderers to hide, and what they were set to.
+        /// <para>
+        /// Everything under the player, less the pack. Narrowing this to the animated skeleton was
+        /// an attempt at the same thing and hid too little: the body is not all parented to the
+        /// animator. What has to be kept out is one subtree, the inventory, which hangs under the
+        /// player as well and whose contents are the things being pointed at.
+        /// </para>
+        /// </summary>
         private bool CacheOriginalRendererStates()
         {
             if (LocalPlayer == null)
@@ -1454,17 +1611,38 @@ namespace SonsVRMod
                 return false;
             }
 
+            Transform pack = _inventorySystem != null ? _inventorySystem.transform : null;
+            _cacheExcludedInventory = pack != null;
+
             _originalRendererStates = new Il2CppSystem.Collections.Generic.Dictionary<Renderer, bool>();
 
+            int kept = 0;
             var renderers = LocalPlayer.GetComponentsInChildren<Renderer>(true);
+
             foreach (var r in renderers)
             {
-                if (r != null)
-                    _originalRendererStates[r] = r.enabled;
+                if (r == null)
+                    continue;
+
+                // IsChildOf counts the transform itself, so this covers the pack and all of it.
+                if (pack != null && r.transform.IsChildOf(pack))
+                {
+                    kept++;
+                    continue;
+                }
+
+                _originalRendererStates[r] = r.enabled;
             }
+
+            MelonLogger.Msg($"[VRPlayer] {_originalRendererStates.Count} renderers to hide on the " +
+                            $"character, {kept} left alone in the pack" +
+                            (pack == null ? " (the pack has not been found yet)" : ""));
 
             return true;
         }
+
+        /// <summary>Whether the list was taken with the pack known, and so actually left out of it.</summary>
+        private bool _cacheExcludedInventory;
 
         private void HidePlayerRenderers()
         {
@@ -1844,6 +2022,39 @@ namespace SonsVRMod
         /// a cursor sized for a monitor is a few pixels across on a panel a metre away.
         /// </para>
         /// </summary>
+        /// <summary>
+        /// Whether the game's arrow is wanted at all.
+        /// <para>
+        /// Not while the beam is pointing: the arrow stays in the middle of the display, following
+        /// the head, and the selection no longer does. Kept when the beam is off, since then the
+        /// head is what points and the arrow marks the spot.
+        /// </para>
+        /// </summary>
+        private bool ShowSoftwareCursor()
+        {
+            if (VRConfig.InventorySoftwareCursor)
+                return true;
+
+            return !(VRConfig.InventoryLaserPointing && VRConfig.DriveInventoryCamera);
+        }
+
+        /// <summary>
+        /// Puts the arrow away, undoing what ForceCursorVisible does to keep it up.
+        /// <para>
+        /// Its own alpha is cleared as well as the object being switched off: the game turns it
+        /// back on by itself, and an object that reappears with the alpha it was left at would come
+        /// back invisible on the frames it is meant to be seen.
+        /// </para>
+        /// </summary>
+        private void HideSoftwareCursor()
+        {
+            if (_softwareCursor == null)
+                return;
+
+            if (_softwareCursor.activeSelf)
+                _softwareCursor.SetActive(false);
+        }
+
         private void ForceCursorVisible()
         {
             if (_softwareCursor == null)
@@ -1980,14 +2191,37 @@ namespace SonsVRMod
             }
         }
 
-        private void UpdateCursorPositionFromGaze()
+        /// <summary>
+        /// Puts the inventory cursor where the player is pointing.
+        /// <para>
+        /// This is what selects. The game does not read a screen position here: the cursor is an
+        /// object lying among the items, and whichever one it is over is the one that answers. So
+        /// the beam has to move this, and aiming the camera it is projected through, which is what
+        /// the first attempt did, changed nothing at all.
+        /// </para>
+        /// <para>
+        /// The point is taken from where the beam crosses the surface the items lie on, so the
+        /// cursor lands on the layout however far away it is. Looking, at a fixed metre and a half
+        /// ahead, is what happens when the beam is off or points away from the surface: it worked
+        /// because a player reading their pack is looking down at it, and it fails as soon as they
+        /// are not.
+        /// </para>
+        /// </summary>
+        private void UpdateInventoryCursorPosition()
         {
             if (_cursorController == null || StereoRender.Head == null) return;
 
-            Vector3 desiredPosition = StereoRender.Head.position + StereoRender.Head.forward * 1.5f;
-            Quaternion desiredRotation = Quaternion.LookRotation(StereoRender.Head.forward, Vector3.up);
+            Vector3 forward = StereoRender.Head.forward;
+
+            Vector3 desiredPosition = VRConfig.InventoryLaserPointing && _inventoryAimValid
+                ? _inventoryAimPoint
+                : StereoRender.Head.position + forward * 1.5f;
+
+            // Kept facing the same way as before: the cursor is a flat thing, and turning it to
+            // face the beam instead would tip it on edge whenever the hand came round to the side.
+            Quaternion desiredRotation = Quaternion.LookRotation(forward, Vector3.up);
+
             _cursorController.gameObject.transform.SetPositionAndRotation(desiredPosition, desiredRotation);
-            
         }
 
 
@@ -2097,9 +2331,23 @@ namespace SonsVRMod
             _miniMapContentMeasured = false;
         }
 
+        /// <summary>
+        /// The canvas the game draws its display on. The pause and save screens are children of it,
+        /// so it is also the only thing a pointer can be aimed at to reach them.
+        /// </summary>
+        public Canvas HudCanvas => _screenSpaceCanvas;
+
         private void UpdateCanvasPositionForVR()
         {
             if (StereoRender.Head == null) return;
+
+            // While a menu is open the display is not ours to place. The pause and save screens hang
+            // off this same canvas, and a surface locked to the head cannot be pointed at: it moves
+            // with the very gesture used to aim at it. VRMenu anchors it in the room for as long as
+            // the menu is up, and this takes it back on the frame after it closes, because both the
+            // scale and the position below are re-applied every frame rather than set once.
+            if (VRMenu.Active)
+                return;
 
             Vector3 headRight = StereoRender.Head.right;
             Vector3 headUp = StereoRender.Head.up;
@@ -2221,11 +2469,19 @@ namespace SonsVRMod
                     _inputCursorState.gameObject.active = true;
                 }
                 
-                if (_softwareCursor != null && _softwareCursor.active == false)
+                if (ShowSoftwareCursor())
                 {
-                    _softwareCursor.active = true;
+                    if (_softwareCursor != null && _softwareCursor.active == false)
+                    {
+                        _softwareCursor.active = true;
+                    }
+
+                    ForceCursorVisible();
                 }
-                ForceCursorVisible();
+                else
+                {
+                    HideSoftwareCursor();
+                }
 
                 if (_cursorController.enabled == false)
                 {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using MelonLoader;
 using UnityEngine;
 using Valve.VR;
@@ -149,6 +149,7 @@ namespace SonsVRMod
 
             if (!plane.Raycast(ray, out float distance) || distance > VRConfig.LaserRange)
             {
+                ReportMiss($"never reached the plane of '{panel.name}'", panel, origin, direction);
                 DrawBeam(origin, origin + direction * VRConfig.LaserRange, false);
                 return false;
             }
@@ -158,24 +159,75 @@ namespace SonsVRMod
             // Into the panel's own space, which is the same space its controls are placed in, so no
             // conversion through a camera or a screen position is involved at all.
             Vector3 localPoint = panel.InverseTransformPoint(hit);
-            Vector2 half = panel.sizeDelta * 0.5f;
+            var local2D = new Vector2(localPoint.x, localPoint.y);
 
-            bool onPanel = Mathf.Abs(localPoint.x) <= half.x && Mathf.Abs(localPoint.y) <= half.y;
+            // Measured by the resolved rect rather than by sizeDelta. A canvas anchored stretched
+            // reports zero there, which made every bound collapse to a point: the beam crossed the
+            // panel, was judged to have missed it, and passed straight through a menu that was right
+            // in front of it. The rect also carries the pivot, so an off centre panel is bounded
+            // where it actually is instead of around its transform.
+            Rect bounds = panel.rect;
+            bool onPanel = bounds.size.y > 1f
+                ? bounds.Contains(local2D)
+                : IsWithin(local2D, panel.sizeDelta * 0.5f);
 
             DrawBeam(origin, hit, onPanel);
 
             if (!onPanel)
-                return false;
+            {
+                ReportMiss($"crossed the plane of '{panel.name}' at ({local2D.x:F0}, {local2D.y:F0}) px, " +
+                           $"outside x {bounds.xMin:F0}..{bounds.xMax:F0} y {bounds.yMin:F0}..{bounds.yMax:F0}, " +
+                           $"{distance:F2} m along the beam",
+                           panel, origin, direction);
 
-            local = new Vector2(localPoint.x, localPoint.y);
+                return false;
+            }
+
+            local = local2D;
             IsAiming = true;
             return true;
+        }
+
+        private static bool IsWithin(Vector2 point, Vector2 half)
+        {
+            return Mathf.Abs(point.x) <= half.x && Mathf.Abs(point.y) <= half.y;
+        }
+
+        private int _missReportCountdown;
+
+        /// <summary>
+        /// Says where the beam went when it did not land on the panel.
+        /// <para>
+        /// A beam that is never cast, one that misses the plane entirely and one that crosses it just
+        /// outside the panel all look identical from inside the headset: the pointer does not move.
+        /// They are three different faults. Throttled, because a miss is the normal state whenever
+        /// the player is not pointing at anything.
+        /// </para>
+        /// </summary>
+        private void ReportMiss(string what, RectTransform panel, Vector3 origin, Vector3 direction)
+        {
+            if (--_missReportCountdown > 0)
+                return;
+
+            _missReportCountdown = 120;
+
+            // The one number that separates the two possible faults. Wide means the beam genuinely
+            // points somewhere else, and the fault is in the pose or in the rig it is mapped through.
+            // Narrow means the beam is aimed at the panel and it is the conversion into the panel's
+            // own coordinates that is wrong. Nothing else told these apart.
+            Vector3 toPanel = panel.position - origin;
+            float offBy = Vector3.Angle(direction, toPanel);
+
+            MelonLogger.Msg($"[VRLaser] {what}; beam is {offBy:F0} degrees off the centre of the panel " +
+                            $"({toPanel.magnitude:F2} m away), " +
+                            $"beam from {origin} towards {direction}, panel at {panel.position} " +
+                            $"facing {panel.forward}");
         }
 
         /// <summary>
         /// The pointing hand, in world space, mapped through the rig exactly as the head is.
         /// </summary>
-        private static bool TryGetControllerRay(out Vector3 origin, out Vector3 direction)
+        public static bool TryGetControllerRay(out Vector3 origin, out Vector3 direction)
         {
             origin = Vector3.zero;
             direction = Vector3.forward;
@@ -230,6 +282,36 @@ namespace SonsVRMod
 
             _line.startColor = colour;
             _line.endColor = colour;
+        }
+
+        /// <summary>
+        /// Shows the beam with nothing to land on, for pointing at the world rather than a panel.
+        /// <para>
+        /// The inventory has no panel to hit: the game finds what is under the pointer by projecting
+        /// through its own camera, so what the beam is for here is telling the player where that
+        /// camera is aimed. Drawn to a fixed length for the same reason.
+        /// </para>
+        /// </summary>
+        public bool ShowRay(out Vector3 origin, out Vector3 direction)
+        {
+            origin = Vector3.zero;
+            direction = Vector3.forward;
+
+            if (!VRConfig.LaserPointer)
+            {
+                Hide();
+                return false;
+            }
+
+            if (!TryGetControllerRay(out origin, out direction))
+            {
+                Hide();
+                return false;
+            }
+
+            DrawBeam(origin, origin + direction * VRConfig.InventoryLaserLength, true);
+            IsAiming = true;
+            return true;
         }
 
         public void Hide()

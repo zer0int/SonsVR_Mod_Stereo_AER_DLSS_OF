@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using MelonLoader;
 using UnityEngine;
@@ -51,6 +51,7 @@ namespace SonsVRMod
         /// Safe to call more than once per frame: extra calls are ignored.
         /// </summary>
         private static int _traceCount;
+
 
         /// <summary>
         /// Restarts the trace budget. The startup frames burn it long before the rig exists, which
@@ -419,8 +420,10 @@ namespace SonsVRMod
             ApplyMirrorMode();
 
             // CopyFrom wipes the custom projection and the viewport, so both come back afterwards.
-            ApplyProjections();
+            // The viewport goes first: assigning rect is itself what discards a custom projection
+            // matrix, so doing it second would throw away the projection just restored.
             ApplyEyeViewports();
+            ApplyProjections();
             ApplyRenderTargets();
 
             // From here the eye cameras start rendering and submitting; re-arm the pose trace so the
@@ -824,6 +827,16 @@ namespace SonsVRMod
                                 $"left eye {_leftEye.localPosition}, " +
                                 $"proj m00 {_leftProjection.m00:F3} m11 {_leftProjection.m11:F3} " +
                                 $"m02 {_leftProjection.m02:F3} m12 {_leftProjection.m12:F3}");
+
+                // Where a headset puts its canting decides whether anything downstream may rebuild
+                // the projection from tangents. Some runtimes express it as a rotation of the eye,
+                // others fold it into the projection as a shear; the two are logged side by side so
+                // a headset that looks wrong can be told apart from one that merely looks unusual.
+                Vector3 leftCant = _leftEye.localRotation.eulerAngles;
+                Vector3 rightCant = _rightEye.localRotation.eulerAngles;
+                MelonLogger.Msg($"[StereoRender] Eye canting: left {leftCant}, right {rightCant}, " +
+                                $"projection shear left m01 {_leftProjection.m01:F4} m10 {_leftProjection.m10:F4}, " +
+                                $"right m01 {_rightProjection.m01:F4} m10 {_rightProjection.m10:F4}");
             }
 
             ApplyProjections();
@@ -843,10 +856,21 @@ namespace SonsVRMod
         /// <summary>
         /// Builds the projection for one eye, narrowed by the field of view tangents.
         /// <para>
-        /// The runtime gives the frustum as raw tangents. The eye texture maps linearly onto that
-        /// frustum, so rendering into a centred sub-rectangle of the texture means rendering the
-        /// matching sub-range of the tangents: interpolating between the edges gives one from the
-        /// other, and the two stay consistent by construction.
+        /// The matrix always comes from the runtime, never from a frustum rebuilt out of the raw
+        /// tangents. Four tangents describe an axis aligned off-axis frustum and nothing more, so
+        /// <c>Matrix4x4.Frustum</c> can only ever produce an image plane perpendicular to the forward
+        /// axis of the eye. A headset with canted displays puts a rotation into its projection, which
+        /// that rebuild silently drops: the scene is then rendered onto a straight image plane and
+        /// shown by the compositor on a tilted one, and the difference reaches the eye as a keystone
+        /// that shears the world as the head turns. Headsets with parallel displays are unaffected,
+        /// which is exactly why the fault only ever showed on the canted ones.
+        /// </para>
+        /// <para>
+        /// The narrowing is therefore applied on top of the runtime matrix instead of replacing it.
+        /// The crop is centred, so in clip space it is a plain scale: the sub-rectangle spans
+        /// [-CropX, CropX] of normalised device x, and dividing by CropX stretches it back to the
+        /// full [-1, 1] the viewport expects. Every other term of the runtime matrix, the canting
+        /// included, survives untouched.
         /// </para>
         /// <para>
         /// This is why the result is not a zoom. The compositor still maps the whole texture onto the
@@ -855,26 +879,16 @@ namespace SonsVRMod
         /// </summary>
         private Matrix4x4 BuildEyeProjection(EVREye eye)
         {
+            Matrix4x4 projection = OpenVR.System.GetProjectionMatrix(eye, clipStart, clipEnd).ConvertToMatrix4x4();
+
             if (CropX >= 0.999f && CropY >= 0.999f)
-                return OpenVR.System.GetProjectionMatrix(eye, clipStart, clipEnd).ConvertToMatrix4x4();
+                return projection;
 
-            float left = 0f, right = 0f, top = 0f, bottom = 0f;
-            OpenVR.System.GetProjectionRaw(eye, ref left, ref right, ref top, ref bottom);
+            Matrix4x4 crop = Matrix4x4.identity;
+            crop.m00 = 1f / CropX;
+            crop.m11 = 1f / CropY;
 
-            float insetX = (1f - CropX) * 0.5f;
-            float insetY = (1f - CropY) * 0.5f;
-
-            float newLeft = Mathf.Lerp(left, right, insetX);
-            float newRight = Mathf.Lerp(left, right, 1f - insetX);
-            float newTop = Mathf.Lerp(top, bottom, insetY);
-            float newBottom = Mathf.Lerp(top, bottom, 1f - insetY);
-
-            // The runtime reports up as negative and down as positive, the opposite of what Frustum
-            // expects, hence the negation on the vertical pair.
-            return Matrix4x4.Frustum(
-                newLeft * clipStart, newRight * clipStart,
-                -newBottom * clipStart, -newTop * clipStart,
-                clipStart, clipEnd);
+            return crop * projection;
         }
 
         /// <summary>
@@ -887,8 +901,11 @@ namespace SonsVRMod
             float insetY = (1f - CropY) * 0.5f;
             var viewport = new Rect(insetX, insetY, CropX, CropY);
 
-            if (LeftCam != null) LeftCam.rect = viewport;
-            if (RightCam != null) RightCam.rect = viewport;
+            // Only written when it actually differs. The setter discards the custom projection
+            // matrix, and this runs every frame, so an unconditional assignment would spend every
+            // frame invalidating a projection that was already right.
+            if (LeftCam != null && LeftCam.rect != viewport) LeftCam.rect = viewport;
+            if (RightCam != null && RightCam.rect != viewport) RightCam.rect = viewport;
         }
 
         /// <summary>
@@ -1026,6 +1043,10 @@ namespace SonsVRMod
                 Head.localRotation = VRFrame.HmdRotation;
             }
 
+            // The narrowed projection and the viewport it was cut for only agree while both are in
+            // place; anything in the engine that resets one leaves the other describing a field of
+            // view the image no longer fills.
+            ApplyEyeViewports();
             ApplyProjections();
             EnforceMirrorCamera();
             LogFrameHeartbeat();
@@ -1359,6 +1380,62 @@ namespace SonsVRMod
             private readonly StereoRender _stereoRender;
             private int _lastSubmittedFrame = -1;
             private int _errorLogCooldown;
+
+            private static readonly System.Diagnostics.Stopwatch SubmitTimer =
+                new System.Diagnostics.Stopwatch();
+
+            private static int _submitStalls;
+            private static double _worstSubmitMs;
+            private static int _submitReportCountdown;
+
+            /// <summary>Starts timing the call about to be made.</summary>
+            private static void SubmitClock()
+            {
+                if (VRConfig.SubmitStallMs <= 0f)
+                    return;
+
+                SubmitTimer.Restart();
+            }
+
+            /// <summary>
+            /// Notes how long a call into the compositor took, and says so when it took too long.
+            /// <para>
+            /// Measured because the main thread has twice stopped inside Submit with nothing in any log
+            /// to say why. If these calls are stalling routinely then the fault is on this side, in the
+            /// eye textures being handed over while the render thread is still working on them; if they
+            /// run clean for an hour and then one never returns, it is the runtime underneath.
+            /// </para>
+            /// </summary>
+            private static void RecordSubmit(string which)
+            {
+                if (VRConfig.SubmitStallMs <= 0f)
+                    return;
+
+                SubmitTimer.Stop();
+                double ms = SubmitTimer.Elapsed.TotalMilliseconds;
+
+                if (ms > _worstSubmitMs)
+                    _worstSubmitMs = ms;
+
+                if (ms >= VRConfig.SubmitStallMs)
+                {
+                    _submitStalls++;
+                    MelonLogger.Warning($"[StereoRender] {which} took {ms:F0} ms " +
+                                        $"(frame {Time.frameCount}, {_submitStalls} stalls so far)");
+                }
+
+                // A periodic line even when nothing stalls, so a clean run leaves proof it was clean
+                // rather than leaving an empty log to be read as the measurement never having run.
+                if (--_submitReportCountdown > 0)
+                    return;
+
+                _submitReportCountdown = 3000;
+
+                MelonLogger.Msg($"[StereoRender] compositor calls: {_submitStalls} over " +
+                                $"{VRConfig.SubmitStallMs:F0} ms, worst {_worstSubmitMs:F1} ms");
+
+                _worstSubmitMs = 0.0;
+            }
             private int _traceCount;
 
             public bool isRendering;
@@ -1438,12 +1515,16 @@ namespace SonsVRMod
                 VRProfiler.Begin();
 
                 VRWatchdog.Stage(VRWatchdog.SubmittingLeft);
+                SubmitClock();
                 EVRCompositorError errorL = OpenVR.Compositor.Submit(EVREye.Eye_Left, ref leftTex, ref bounds, EVRSubmitFlags.Submit_Default);
+                RecordSubmit("left");
                 if (trace)
                     MelonLogger.Msg($"[StereoRender] Submit left done -> {errorL}");
 
                 VRWatchdog.Stage(VRWatchdog.SubmittingRight);
+                SubmitClock();
                 EVRCompositorError errorR = OpenVR.Compositor.Submit(EVREye.Eye_Right, ref rightTex, ref bounds, EVRSubmitFlags.Submit_Default);
+                RecordSubmit("right");
                 if (trace)
                     MelonLogger.Msg($"[StereoRender] Submit right done -> {errorR}");
 
@@ -1457,7 +1538,9 @@ namespace SonsVRMod
                 if (VRConfig.PostPresentHandoff)
                 {
                     VRWatchdog.Stage(VRWatchdog.HandingOff);
+                    SubmitClock();
                     OpenVR.Compositor.PostPresentHandoff();
+                    RecordSubmit("handoff");
                 }
 
                 VRWatchdog.Stage(VRWatchdog.Idle);

@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using Il2CppInterop.Runtime;
 using MelonLoader;
 using UnityEngine;
 using UnityEngine.UI;
@@ -31,6 +32,14 @@ namespace SonsVRMod
         private RawImage _surfaceImage;
         private int _scanCountdown;
 
+        /// <summary>The point the pointer is on, in panel coordinates. Not a number means nowhere.</summary>
+        private Vector2 _panelPoint = Invalid;
+
+        private static readonly Vector2 Invalid = new Vector2(float.NaN, float.NaN);
+
+        private Func<Vector2, Vector2> _mappingManaged;
+        private Il2CppSystem.Func<Vector2, Vector2> _mapping;
+
         /// <summary>True once a UI Toolkit screen is being shown on the panel in the world.</summary>
         public bool HasContent { get; private set; }
 
@@ -38,6 +47,82 @@ namespace SonsVRMod
         public Vector2 PanelSize => _panelTexture != null
             ? new Vector2(_panelTexture.width, _panelTexture.height)
             : Vector2.zero;
+
+        /// <summary>
+        /// The surface the captured screens are shown on, so the pointer can be aimed at it like at
+        /// any other panel. Null until a screen has actually been captured.
+        /// </summary>
+        public RectTransform SurfaceRect => _surface != null
+            ? _surface.transform as RectTransform
+            : null;
+
+        /// <summary>
+        /// Puts the pointer on the panel, given where it lands in the world.
+        /// <para>
+        /// A UI Toolkit screen aimed at a texture no longer has any relationship to the screen the
+        /// mouse is reported in, so the position a mouse event carries is meaningless to it. The
+        /// runtime knows this and offers the way out: a panel can be given a function that converts
+        /// a screen position into a panel one, and it uses that function for every pointer event it
+        /// handles. This is that conversion. It ignores the position it is handed and answers with
+        /// the point the beam is on, which is the only one that means anything here.
+        /// </para>
+        /// <para>
+        /// Panel coordinates count pixels of the texture from its top left corner, so the vertical
+        /// axis runs opposite to the one the surface is measured in. Not a number is the value the
+        /// runtime reads as "the pointer is not on this panel", which is what keeps a button from
+        /// staying lit after the beam has moved off it.
+        /// </para>
+        /// </summary>
+        public void SetPointer(Vector3 world)
+        {
+            RectTransform rect = SurfaceRect;
+
+            if (rect == null || _panelTexture == null)
+            {
+                _panelPoint = Invalid;
+                return;
+            }
+
+            Vector2 size = rect.ResolvedSize();
+            if (size.x <= 0f || size.y <= 0f)
+            {
+                _panelPoint = Invalid;
+                return;
+            }
+
+            Vector3 local = rect.InverseTransformPoint(world);
+            float u = local.x / size.x + 0.5f;
+            float v = local.y / size.y + 0.5f;
+
+            if (u < 0f || u > 1f || v < 0f || v > 1f)
+            {
+                _panelPoint = Invalid;
+                return;
+            }
+
+            _panelPoint = new Vector2(u * _panelTexture.width, (1f - v) * _panelTexture.height);
+        }
+
+        private Vector2 ScreenToPanel(Vector2 screenPosition)
+        {
+            return _panelPoint;
+        }
+
+        /// <summary>
+        /// The conversion above, as something the runtime can call. Built once and kept, because a
+        /// delegate handed across to the runtime and then dropped here is collected while still in
+        /// use on the other side.
+        /// </summary>
+        private Il2CppSystem.Func<Vector2, Vector2> Mapping()
+        {
+            if (_mapping != null)
+                return _mapping;
+
+            _mappingManaged = ScreenToPanel;
+            _mapping = DelegateSupport.ConvertDelegate<Il2CppSystem.Func<Vector2, Vector2>>(_mappingManaged);
+
+            return _mapping;
+        }
 
         public void Update(Vector3 position, Quaternion rotation)
         {
@@ -56,31 +141,74 @@ namespace SonsVRMod
 
         /// <summary>
         /// Finds panels still drawing to the screen and points them at a texture instead.
+        /// <para>
+        /// Two ways of finding them, because one was not enough. A UIDocument is the component that
+        /// puts a screen on show, and looking for those found the options screen but not the pause
+        /// or save screens: whatever draws them is not reached that way. The panel settings, on the
+        /// other hand, are the thing that actually decides where a UI Toolkit screen is painted, and
+        /// they can be found whether or not a component points at them.
+        /// </para>
+        /// <para>
+        /// A panel already aimed at a texture is left alone: it is either one of ours or something
+        /// the game is deliberately drawing elsewhere.
+        /// </para>
         /// </summary>
         private void Capture()
         {
-            var documents = UnityEngine.Object.FindObjectsOfType<UIDocument>();
+            int documents = 0;
+            int panels = 0;
 
-            foreach (var document in documents)
+            foreach (var document in UnityEngine.Object.FindObjectsOfType<UIDocument>())
             {
                 if (document == null || !document.isActiveAndEnabled)
                     continue;
 
-                PanelSettings settings = document.panelSettings;
-                if (settings == null || _captured.Contains(settings))
+                documents++;
+                Take(document.panelSettings, document.name);
+            }
+
+            foreach (var settings in Resources.FindObjectsOfTypeAll<PanelSettings>())
+            {
+                if (settings == null)
                     continue;
 
-                EnsureTexture();
+                panels++;
+                Take(settings, settings.name);
+            }
 
-                settings.targetTexture = _panelTexture;
-                _captured.Add(settings);
-                HasContent = true;
+            // Said once per scan while nothing has been found, so an empty log means the screens are
+            // not UI Toolkit at all rather than the search never having run.
+            if (!HasContent && --_emptyReportCountdown <= 0)
+            {
+                _emptyReportCountdown = 4;
 
-                MelonLogger.Msg($"[VRUiToolkit] '{document.name}' now renders into a texture " +
-                                $"({_panelTexture.width}x{_panelTexture.height}) instead of the screen");
+                MelonLogger.Msg($"[VRUiToolkit] nothing captured: {documents} documents on show, " +
+                                $"{panels} panel settings in memory");
             }
 
             EnsureSurface();
+        }
+
+        private int _emptyReportCountdown;
+
+        /// <summary>Points one panel at our texture, if it is still painting onto the screen.</summary>
+        private void Take(PanelSettings settings, string owner)
+        {
+            if (settings == null || _captured.Contains(settings))
+                return;
+
+            if (settings.targetTexture != null)
+                return;
+
+            EnsureTexture();
+
+            settings.targetTexture = _panelTexture;
+            settings.SetScreenToPanelSpaceFunction(Mapping());
+            _captured.Add(settings);
+            HasContent = true;
+
+            MelonLogger.Msg($"[VRUiToolkit] '{owner}' now renders into a texture " +
+                            $"({_panelTexture.width}x{_panelTexture.height}) instead of the screen");
         }
 
         private void EnsureTexture()
@@ -143,12 +271,16 @@ namespace SonsVRMod
         {
             foreach (var settings in _captured)
             {
-                if (settings != null)
-                    settings.targetTexture = null;
+                if (settings == null)
+                    continue;
+
+                settings.targetTexture = null;
+                settings.SetScreenToPanelSpaceFunction(null);
             }
 
             _captured.Clear();
             HasContent = false;
+            _panelPoint = Invalid;
 
             if (_surface != null)
                 _surface.gameObject.SetActive(false);

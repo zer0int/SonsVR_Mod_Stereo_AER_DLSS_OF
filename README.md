@@ -6,7 +6,7 @@ Built with **MelonLoader** and **Il2CppInterop**, driving **OpenVR** directly. W
 OpenVR headset: Index, Vive, Quest over Link or Virtual Desktop, and others. No game file is
 replaced, and existing saves and mods keep working.
 
-**Version 0.0.4-alpha**
+**Version 0.0.5-alpha**
 
 ---
 
@@ -17,6 +17,14 @@ projection matrices from OpenVR, render targets sized from the runtime's recomme
 submitted to the compositor at end of frame. The eye cameras copy the render configuration of the
 active game camera, HDRP volumes and post-processing included, so the VR view matches what the flat
 view would show.
+
+**Canted displays.** The per-eye projection is taken from the runtime exactly as given, and the
+field-of-view crop is applied as a scale on top of it rather than by rebuilding the frustum from raw
+tangents. Four tangents can only describe a frustum square to the eye's forward axis, so rebuilding
+one silently drops the shear a headset with angled displays puts into its projection: the scene is
+drawn on a straight image plane and shown on a tilted one, and the difference reaches the eye as a
+keystone that shears the world as the head turns. Headsets with parallel displays are unaffected,
+which is why this only ever showed on the canted ones.
 
 **6DoF head tracking.** Position as well as rotation, measured from a neutral pose captured at scene
 start and clamped so the view cannot drift off the character's head.
@@ -32,9 +40,24 @@ intact.
 
 **Turning.** Snap turning in fixed steps, or smooth turning, chosen from the settings panel.
 
+**Thumbsticks that do one thing at a time.** Running and crouching need the right stick pushed close
+to the end of its travel, because that stick also turns the player and a turn is a push sideways
+that rarely stays perfectly sideways. Stepping sideways needs the left stick past half, so walking
+forward does not drift into a diagonal. Each direction is let go of at a lower threshold than it
+took to engage, since a thumb resting on the line would otherwise cross it many times a second and
+the key would flicker with it.
+
 **Everything flat is put in the room.** Menus, options, inventory, the heads up display and the
 loading screen are moved onto world-anchored panels. A screen space canvas never reaches the eye
 textures, so without this they exist only on the monitor.
+
+**Pause, save and dialog screens are reachable.** These hang off the same canvas the mod moves into
+world space for the display, so the panel scan never saw them: they were visible, locked to the
+head, and impossible to point at. While a menu is open that canvas is anchored in the room instead,
+and taken back by the display the moment the menu closes. Panels are also moved onto a layer the eye
+cameras actually draw, read from the camera's own culling mask rather than written as a fixed layer:
+in play the game's camera leaves out the interface layer, so a canvas moved into world space and
+left there is present, laid out, fully answering the pointer, and invisible.
 
 **Laser pointer.** A beam from the controller drives the pointer on every panel. Pressing the other
 trigger hands the beam to the other hand. The thumbstick still works when the beam is off the panel.
@@ -50,30 +73,74 @@ injected into menus.
 
 **Diagnostics.** A frame profiler separating the mod's own cost from time spent waiting on the
 compositor, a camera census, a watchdog reporting where the main thread stopped if the game locks
-up, and one-shot surveys of the player skeleton and the interface layout.
+up, and one-shot surveys of the player skeleton and the interface layout. `F9` and `F10` write down
+the whole state of the interface on demand — every canvas with its render mode, layer, event camera,
+raycaster, control count and contents, plus the event system and every active raycaster — which is
+how a screen the mod never picked up can be identified at all.
 
 ### Controls
 
-| Action | Control |
-|---|---|
-| Move | Left thumbstick |
-| Turn | Right thumbstick, left and right |
-| Run | Right thumbstick up |
-| Crouch | Right thumbstick down |
-| Primary action, interact, place | Right trigger |
-| Secondary action, melee | Left trigger, or a fast right hand swing |
-| Take, use, save | Either grip |
-| Drop | Either grip, held |
-| Jump | Both controllers raised sharply |
-| Inventory | Left Y |
-| Lighter | Right B |
-| Reload, rotate | Right A |
-| GPS tracker | Left grip at the right shoulder |
-| Walkie-talkie | Right grip at the left shoulder |
-| Book | Right grip at the right shoulder |
-
 Gestures and buttons are translated into the keyboard and mouse events the game already
-understands, so no game code is changed.
+understands, so no game code is changed. The key each one sends is listed, since the game's own
+bindings screen speaks in those terms.
+
+**Thumbsticks**
+
+| Control | Sends | Action |
+|---|---|---|
+| Left stick, forward and back | `W` / `S` | Walk |
+| Left stick, sideways | `A` / `D` | Strafe. Needs the stick past half, so walking forward does not drift diagonally |
+| Right stick, down | `Left Ctrl` | Crouch. Needs the stick close to the end of its travel |
+| Right stick, up | `Left Shift` | Run. Needs the stick close to the end of its travel |
+| Right stick, sideways | — | Turn, snap or smooth. Moves the rig, not the character; suspended while the left grip is held |
+
+**Triggers**
+
+| Control | Sends | Action |
+|---|---|---|
+| Right trigger | `LMB` | Primary action, interact, place |
+| Left trigger | `RMB` | Secondary action, placement mode |
+
+**Grips**
+
+| Control | Sends | Action |
+|---|---|---|
+| Either grip | `E`, held | Take, use, save, select |
+| Either grip, held 2 s then released | `G` | Drop, instead of releasing `E` |
+| Left grip + right stick left | `Q` | Rotate left, cycle grab bag |
+| Left grip + right stick right | `R` | Rotate right |
+| Right grip at the left shoulder | `T` | Walkie-talkie |
+| Left grip at the right shoulder | `M` | GPS tracker |
+| Right grip at the right shoulder | `B` | Book |
+
+**Buttons**
+
+Each spare button carries two commands. The tap is the one used constantly, the hold the one used
+rarely or regretted when it happens by accident.
+
+| Control | Tap | Held 0.6 s |
+|---|---|---|
+| Left X | `X` cancel structure, book mode | `Esc` pause menu |
+| Left Y | `I` inventory | — |
+| Right A | `R` reload | `L` lighter |
+| Right B | `C` dismantle | `Z` sleep |
+| Left menu button | `Esc` pause menu | — |
+
+**Gestures**
+
+| Gesture | Sends | Action |
+|---|---|---|
+| Both controllers raised sharply | `Space` | Jump |
+| Right hand swung fast | `LMB` | Melee |
+
+Rotating a piece and turning the player both want the right stick, so the left grip says which is
+meant: held, the stick rotates what is being placed and the player stands still. It steps once per
+push and re-arms when the stick returns to centre, so a piece can be lined up a face at a time.
+
+The stick clicks are deliberately unused: pressing a stick in wears the controller out, and nothing
+here is worth that.
+
+Not bound: the tertiary action (`MMB`) and back (`Left Arrow`).
 
 ---
 
@@ -90,7 +157,11 @@ understands, so no game code is changed.
 Run `SONS_VR_oneclick.exe` from the release and point it at the game folder. It refuses any folder
 without `SonsOfTheForest.exe`, since installing elsewhere succeeds and then quietly does nothing.
 
-By hand instead: copy the contents of `dist/` into the game folder, keeping the structure.
+By hand instead: copy the contents of `dist/` into the game folder, keeping the structure. That
+includes `SonsOfTheForest_Data/StreamingAssets/SteamVR/`, which is not optional: SteamVR reads the
+action manifest from there, and without it every action reads zero. The headset tracks, the hands
+track, the beam is drawn, and no trigger, stick or button does anything, because poses do not go
+through the action system and everything else does.
 
 **The first run needs an internet connection and takes several minutes**, with the window apparently
 doing nothing. MelonLoader downloads the tools it reads the game with, then generates
@@ -121,6 +192,8 @@ The ones worth knowing:
 | `SettingsPanelHeight` / `SettingsPanelDistance` | `1.4` / `1.6` | Size and distance of the settings panel, in metres. Move them together. |
 | `HandTracking` | `true` | Arms follow the controllers. |
 | `SmoothTurn` | `false` | Smooth turning instead of snap. |
+| `RunCrouchThreshold` | `0.85` | How far the right stick goes forward or back before running or crouching start. High, so turning cannot trigger either. |
+| `StrafeThreshold` | `0.50` | How far the left stick goes sideways before the player steps sideways. |
 | `Profile` | `true` | Report per-frame cost to the MelonLoader log. |
 
 ---

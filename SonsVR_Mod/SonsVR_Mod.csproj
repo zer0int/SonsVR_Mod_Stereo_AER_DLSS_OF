@@ -6,10 +6,10 @@
 		<RootNamespace>SonsVRMod</RootNamespace>
 		<LangVersion>default</LangVersion>
 		<IsPackable>false</IsPackable>
-		<AssemblyVersion>0.0.4.0</AssemblyVersion>
-		<FileVersion>0.0.4.0</FileVersion>
+		<AssemblyVersion>0.0.5.0</AssemblyVersion>
+		<FileVersion>0.0.5.0</FileVersion>
 		<!-- Keep in step with ModInfo.Version and the GitHub release tag. -->
-		<InformationalVersion>0.0.4-alpha</InformationalVersion>
+		<InformationalVersion>0.0.5-alpha</InformationalVersion>
 		<NeutralLanguage>en-US</NeutralLanguage>
 		<LangVersion>latest</LangVersion>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -1347,6 +1347,7 @@
 		<Compile Include="VRHudRecon.cs" />
 		<Compile Include="VRHands.cs" />
 		<Compile Include="VRSettingsPanel.cs" />
+		<Compile Include="VRUiDump.cs" />
 		<Compile Include="VRLaser.cs" />
 		<Compile Include="VRLoadingScreen.cs" />
 		<Compile Include="VRMenu.cs" />

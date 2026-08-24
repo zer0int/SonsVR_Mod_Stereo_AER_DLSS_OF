@@ -22,6 +22,22 @@ namespace SonsVRMod
         public static float RenderScale = 0.7f;
 
         /// <summary>
+        /// Milliseconds a single Submit may take before it is written to the log as a stall.
+        /// <para>
+        /// The compositor counted forty nine timeout episodes over one session that ended with the
+        /// main thread stopped inside Submit, so the question is whether that call stalls all the
+        /// time and once failed to come back, or whether it ran clean until it stopped dead. The two
+        /// have different causes and the log cannot tell them apart without measuring.
+        /// </para>
+        /// <para>
+        /// Well above a frame at forty per second, so ordinary waiting on the compositor is not
+        /// reported: only a submit that has plainly lost its place.
+        /// </para>
+        /// </summary>
+        public static float SubmitStallMs = 50f;
+
+
+        /// <summary>
         /// Whether the eye textures are handed to the OpenVR compositor.
         /// Turn off to find out whether a hang comes from the compositor: with this off the headset
         /// stays black by design, but the game should keep running.
@@ -291,10 +307,81 @@ namespace SonsVRMod
         public static float SettingsPanelDistance = 1.6f;
 
         /// <summary>
+        /// Whether the buttons the game leaves spare are bound to the actions it has no room for.
+        /// <para>
+        /// Building needs more commands than a controller has buttons, so the spare ones each carry
+        /// two: a tap and a hold. Turn off to leave the stick clicks and the left X alone.
+        /// </para>
+        /// </summary>
+        public static bool ExtraBindings = true;
+
+        /// <summary>How long a button is held, in seconds, before it counts as a hold and not a tap.</summary>
+        public static float LongPressSeconds = 0.6f;
+
+        /// <summary>
+        /// Whether holding the left grip turns the right stick into the rotate controls for building.
+        /// <para>
+        /// The stick already turns the player, and a piece being placed also has to be turned, so the
+        /// grip says which of the two is meant. Turning the player is suspended while it is held,
+        /// rather than both happening at once.
+        /// </para>
+        /// </summary>
+        public static bool BuildRotateWithGrip = true;
+
+        /// <summary>
         /// Hide the character while the settings panel is open, arms and held items included. The
         /// beam otherwise emerges from the back of a hand that is in the way of the panel.
         /// </summary>
         public static bool HidePlayerInSettings = true;
+
+        /// <summary>
+        /// Whether the inventory is pointed at with the controller rather than with the head.
+        /// <para>
+        /// The game finds what is under the pointer by projecting through its own inventory camera,
+        /// so aiming that camera along the controller is what moves the selection onto the beam.
+        /// That camera draws nothing the player sees: the eye cameras do that, from the head.
+        /// </para>
+        /// </summary>
+        public static bool InventoryLaserPointing = true;
+
+        /// <summary>How far the beam is drawn in the inventory, in metres, having nothing to land on.</summary>
+        public static float InventoryLaserLength = 2.5f;
+
+        /// <summary>
+        /// Whether the game's own arrow is kept on screen in the inventory.
+        /// <para>
+        /// Off while the beam is doing the pointing. The arrow sits in the middle of the display
+        /// wherever the head happens to face, which is no longer where anything is being selected:
+        /// two pointers, one of which is lying. It went to some trouble to stay visible, so it is
+        /// switched off deliberately rather than left to be noticed.
+        /// </para>
+        /// </summary>
+        public static bool InventorySoftwareCursor = false;
+
+        /// <summary>
+        /// Whether the beam can be moved to the other hand from inside the inventory.
+        /// <para>
+        /// On, as it is on the menus, so a left handed player can take the beam wherever they are
+        /// rather than having to leave the inventory to change hands.
+        /// </para>
+        /// <para>
+        /// Both triggers belong to the game in here, the right one being the mouse button that
+        /// takes an item and the left one the secondary action, and they keep working either way:
+        /// swapping only flips which hand the beam comes from. What it costs is that the beam moves
+        /// on a press aimed at the game, which is why it can be turned off.
+        /// </para>
+        /// </summary>
+        public static bool InventoryLaserHandSwitch = true;
+
+        /// <summary>
+        /// Whether the character is taken out of sight while the inventory is open.
+        /// <para>
+        /// The character kneels to open the pack while the viewpoint keeps standing height and its
+        /// own heading. Turning to look at the contents therefore brings a kneeling body into view
+        /// from above, with no head on it, the head being where the player is looking from.
+        /// </para>
+        /// </summary>
+        public static bool HidePlayerInInventory = true;
 
         /// <summary>
         /// Show the loading screen on a panel in the world.
@@ -320,6 +407,29 @@ namespace SonsVRMod
         public static bool LogInterfaceLayout = false;
 
         public static bool LogArmSkeleton = true;
+
+        /// <summary>
+        /// How far the right stick must be pushed forward or back before running or crouching begin.
+        /// <para>
+        /// High on purpose. That stick also turns the player, and a turn is a push sideways that
+        /// rarely stays perfectly sideways: a thumb sweeping left picks up a little forward or back
+        /// on the way, which at a low threshold is enough to break into a run or drop into a crouch
+        /// in the middle of looking around. Asking for something close to the end of travel makes
+        /// the two gestures tell each other apart.
+        /// </para>
+        /// </summary>
+        public static float RunCrouchThreshold = 0.85f;
+
+        /// <summary>
+        /// How far the left stick must be pushed sideways before the player steps sideways.
+        /// <para>
+        /// Half travel, for the same reason at a gentler setting: walking forward is a push that is
+        /// meant to be straight and never quite is, and a low threshold turns every walk into a
+        /// drift across the diagonal. Forward and back keep their own light threshold, since nothing
+        /// else on this stick competes with them.
+        /// </para>
+        /// </summary>
+        public static float StrafeThreshold = 0.5f;
 
         /// <summary>Degrees turned by one flick of the stick.</summary>
         public static float SnapTurnAngle = 30f;
@@ -562,6 +672,12 @@ namespace SonsVRMod
             Register("Head movement range", 0f, 0.8f, () => PositionalTrackingRange,
                 v => PositionalTrackingRange = v, category.GetEntry<float>("PositionalTrackingRange"));
 
+            _group = "Movement";
+            Register("Run and crouch need", 0.5f, 0.98f, () => RunCrouchThreshold,
+                v => RunCrouchThreshold = v, category.GetEntry<float>("RunCrouchThreshold"));
+            Register("Step sideways needs", 0.2f, 0.9f, () => StrafeThreshold,
+                v => StrafeThreshold = v, category.GetEntry<float>("StrafeThreshold"));
+
             _group = "Turning";
             RegisterToggle("Smooth turning", () => SmoothTurn, v => SmoothTurn = v,
                 category.GetEntry<bool>("SmoothTurn"));
@@ -605,6 +721,10 @@ namespace SonsVRMod
                 category.GetEntry<float>("MenuDistance"));
             Register("Inventory pointer size", 1f, 8f, () => InventoryCursorScale,
                 v => InventoryCursorScale = v, category.GetEntry<float>("InventoryCursorScale"));
+            RegisterToggle("Point at the inventory", () => InventoryLaserPointing,
+                v => InventoryLaserPointing = v, category.GetEntry<bool>("InventoryLaserPointing"));
+            RegisterToggle("Hide the body in the inventory", () => HidePlayerInInventory,
+                v => HidePlayerInInventory = v, category.GetEntry<bool>("HidePlayerInInventory"));
             Register("Display sideways", -0.6f, 0.6f, () => HudOffsetX,
                 v => HudOffsetX = v, category.GetEntry<float>("HudOffsetX"));
             Register("Display height", -0.6f, 0.6f, () => HudOffsetY,
@@ -646,6 +766,9 @@ namespace SonsVRMod
 
                 RenderScale = category.CreateEntry("RenderScale", RenderScale,
                     description: "Multiplier on the eye resolution recommended by SteamVR.").Value;
+
+                SubmitStallMs = category.CreateEntry("SubmitStallMs", SubmitStallMs,
+                    description: "Milliseconds one Submit may take before the log records it as a stall. Zero switches the measurement off.").Value;
 
                 SubmitToCompositor = category.CreateEntry("SubmitToCompositor", SubmitToCompositor,
                     description: "Send the eye textures to SteamVR. Off = black headset, for isolating hangs.").Value;
@@ -770,6 +893,30 @@ namespace SonsVRMod
                 SettingsPanelDistance = category.CreateEntry("SettingsPanelDistance", SettingsPanelDistance,
                     description: "Distance in metres the settings panel sits in front of the player.").Value;
 
+                InventoryLaserPointing = category.CreateEntry("InventoryLaserPointing", InventoryLaserPointing,
+                    description: "Aim the inventory with the controller instead of the head.").Value;
+
+                InventoryLaserLength = category.CreateEntry("InventoryLaserLength", InventoryLaserLength,
+                    description: "Metres the beam is drawn in the inventory, where it has nothing to land on.").Value;
+
+                InventorySoftwareCursor = category.CreateEntry("InventorySoftwareCursor", InventorySoftwareCursor,
+                    description: "Keep the game's own arrow on screen in the inventory. Off while the beam points, so there are not two pointers.").Value;
+
+                InventoryLaserHandSwitch = category.CreateEntry("InventoryLaserHandSwitch", InventoryLaserHandSwitch,
+                    description: "Let the other trigger take the beam while the inventory is open, so a left handed player can swap hands without leaving it.").Value;
+
+                HidePlayerInInventory = category.CreateEntry("HidePlayerInInventory", HidePlayerInInventory,
+                    description: "Hide the character while the inventory is open: it kneels below the viewpoint and reads as headless.").Value;
+
+                BuildRotateWithGrip = category.CreateEntry("BuildRotateWithGrip", BuildRotateWithGrip,
+                    description: "Hold the left grip to rotate what is being placed with the right stick, instead of turning.").Value;
+
+                ExtraBindings = category.CreateEntry("ExtraBindings", ExtraBindings,
+                    description: "Bind the spare buttons to the building and menu commands. Each carries a tap and a hold.").Value;
+
+                LongPressSeconds = category.CreateEntry("LongPressSeconds", LongPressSeconds,
+                    description: "Seconds a spare button is held before it counts as a hold rather than a tap.").Value;
+
                 HidePlayerInSettings = category.CreateEntry("HidePlayerInSettings", HidePlayerInSettings,
                     description: "Hide the character while the settings panel is open.").Value;
 
@@ -787,6 +934,12 @@ namespace SonsVRMod
 
                 PostPresentHandoff = category.CreateEntry("PostPresentHandoff", PostPresentHandoff,
                     description: "Hand the frame over to the compositor explicitly after submitting, to avoid both sides waiting.").Value;
+
+                RunCrouchThreshold = category.CreateEntry("RunCrouchThreshold", RunCrouchThreshold,
+                    description: "How far the right stick goes forward or back before running or crouching start. High, so turning cannot trigger either.").Value;
+
+                StrafeThreshold = category.CreateEntry("StrafeThreshold", StrafeThreshold,
+                    description: "How far the left stick goes sideways before the player steps sideways. Keeps walking forward from drifting into a diagonal.").Value;
 
                 SnapTurnAngle = category.CreateEntry("SnapTurnAngle", SnapTurnAngle,
                     description: "Degrees turned by one flick of the stick.").Value;

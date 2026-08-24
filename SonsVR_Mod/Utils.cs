@@ -45,6 +45,22 @@ namespace SonsVRMod
         }
 
 
+        /// <summary>
+        /// The size a rect really has.
+        /// <para>
+        /// A canvas anchored stretched reports zero in <c>sizeDelta</c> while its actual size lives
+        /// in the resolved rect, so anything measuring it by <c>sizeDelta</c> collapses to a point.
+        /// That is not a rounding error, it is the difference between a panel that can be pointed at
+        /// and one that cannot be hit anywhere at all.
+        /// </para>
+        /// </summary>
+        public static Vector2 ResolvedSize(this RectTransform rect)
+        {
+            Vector2 size = rect.rect.size;
+
+            return size.y > 1f ? size : rect.sizeDelta;
+        }
+
         public static Vector3 GetFlatDirection(this Vector3 forward)
         {
             forward.y = 0;

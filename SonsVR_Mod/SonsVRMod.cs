@@ -241,6 +241,10 @@ namespace SonsVRMod
             VRProfiler.BeginFrame();
             VRWatchdog.Beat();
 
+            // First thing in the frame, before the mod writes any keyboard state of its own, so a
+            // real key press cannot be overwritten by a synthetic one on its way in.
+            VRUiDump.CheckHotkeys();
+
             if (vrEnabled)
             {
                 // Blocking WaitGetPoses for this frame. It has to happen before anything reads a

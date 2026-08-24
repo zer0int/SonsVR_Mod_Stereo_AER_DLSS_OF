@@ -1,4 +1,5 @@
-﻿using MelonLoader;
+﻿using System;
+using MelonLoader;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
@@ -27,6 +28,31 @@ namespace SonsVRMod
         private bool _isGripPressed = false;
         private float _gripPressStartTime = 0f;
         private const float LongPressThreshold = 2f; // Long press duration in seconds
+
+        // Held state for the four gated stick directions, so each can be let go of at a lower
+        // threshold than it took to engage.
+        private bool _running;
+        private bool _crouching;
+        private bool _stepLeft;
+        private bool _stepRight;
+
+        /// <summary>
+        /// Fraction of the engaging threshold at which a direction is let go again.
+        /// </summary>
+        private const float ReleaseFraction = 0.75f;
+
+        /// <summary>
+        /// A threshold that remembers whether it is currently held.
+        /// <para>
+        /// A bare comparison chatters: a thumb resting near the line crosses it many times a second,
+        /// and the key it drives flickers with it, which the game reads as tapping run on and off.
+        /// Letting go lower than it engages gives the stick somewhere to sit.
+        /// </para>
+        /// </summary>
+        private static bool Latch(bool held, float value, float threshold)
+        {
+            return value > (held ? threshold * ReleaseFraction : threshold);
+        }
 
         public GameObject LocalPlayer;
         private bool _wasRightGripRightPressed = false;
@@ -100,25 +126,47 @@ namespace SonsVRMod
             bool BPress = NativeVRInput.GetBoolean("ButtonRight_B_Press");
 
             
-            // Map left thumbstick to WASD movement
+            // Map left thumbstick to WASD movement.
+            //
+            // Forward and back stay light: nothing else on this stick competes with them. Sideways
+            // has to be asked for, because a push meant to be straight ahead never is, and a light
+            // threshold turns every walk into a drift across the diagonal.
             keyboard.wKey.WriteValueIntoEvent(lstick.y > 0.1f ? 1f : 0f, eventPtr);
             keyboard.sKey.WriteValueIntoEvent(lstick.y < -0.1f ? 1f : 0f, eventPtr);
-            keyboard.aKey.WriteValueIntoEvent(lstick.x < -0.1f ? 1f : 0f, eventPtr);
-            keyboard.dKey.WriteValueIntoEvent(lstick.x > 0.1f ? 1f : 0f, eventPtr);
+
+            _stepLeft = Latch(_stepLeft, -lstick.x, VRConfig.StrafeThreshold);
+            _stepRight = Latch(_stepRight, lstick.x, VRConfig.StrafeThreshold);
+
+            keyboard.aKey.WriteValueIntoEvent(_stepLeft ? 1f : 0f, eventPtr);
+            keyboard.dKey.WriteValueIntoEvent(_stepRight ? 1f : 0f, eventPtr);
             
             // Map Y button (left controller) to 'I' (e.g., inventory)
             keyboard.iKey.WriteValueIntoEvent(YPress ? 1f : 0f, eventPtr);
             
             // Map B button (right controller) to 'L' (e.g., LIGHTER)
-            keyboard.lKey.WriteValueIntoEvent(BPress ? 1f : 0f, eventPtr);
+            // B is no longer the lighter: it carries dismantle and, held, sleep. The lighter moved
+            // to the right stick click, which those two vacated. Written here as always off so the
+            // key cannot stick down from an earlier press.
+            keyboard.lKey.WriteValueIntoEvent(0f, eventPtr);
             
             // Map A button (right controller) to 'R' (e.g., RELOAD/ROTATE RIGHT)
-            keyboard.rKey.WriteValueIntoEvent(APress ? 1f : 0f, eventPtr); // FIXED: was BPress
+            // A is read as a tap and a hold further down, so it is not written here as well: held
+            // for the lighter it would otherwise reload for as long as it was down.
+            keyboard.rKey.WriteValueIntoEvent(0f, eventPtr);
 
             
             
-            // Map right thumbstick down to Left Ctrl (e.g., crouch)
-            keyboard.leftCtrlKey.WriteValueIntoEvent(rstick.y < -0.3f ? 1f : 0f, eventPtr);
+            // Right thumbstick: forward runs, back crouches.
+            //
+            // Both are held well past the middle before they engage, because this is also the stick
+            // that turns the player. A turn is a push sideways that rarely stays perfectly sideways,
+            // and at the old threshold the stray forward or back picked up while sweeping the thumb
+            // was enough to break into a run or drop into a crouch in the middle of looking around.
+            _running = Latch(_running, rstick.y, VRConfig.RunCrouchThreshold);
+            _crouching = Latch(_crouching, -rstick.y, VRConfig.RunCrouchThreshold);
+
+            keyboard.leftShiftKey.WriteValueIntoEvent(_running ? 1f : 0f, eventPtr);
+            keyboard.leftCtrlKey.WriteValueIntoEvent(_crouching ? 1f : 0f, eventPtr);
 
             // Submit the synthetic event to Unity's input system
             InputSystem.QueueEvent(eventPtr);
@@ -130,6 +178,236 @@ namespace SonsVRMod
             UpdateWalkieTalkieInput();
             UpdateGpsInput();
             UpdateBookInput();
+            UpdateExtraBindings();
+            UpdateBuildRotation();
+        }
+
+        private bool _buildRotateArmed = true;
+
+        /// <summary>
+        /// Turns a piece that is being placed, rather than turning the player.
+        /// <para>
+        /// Both want the same stick. The left grip decides between them: held, the stick rotates
+        /// what is in hand and the player stands still; released, it turns the player as it always
+        /// did. Nothing new has to be learnt, since it is the stick that already means "turn".
+        /// </para>
+        /// <para>
+        /// One step per push, re-armed when the stick comes back to the middle, so a piece can be
+        /// lined up a face at a time instead of spinning while the thumb rests.
+        /// </para>
+        /// </summary>
+        private void UpdateBuildRotation()
+        {
+            if (!VRConfig.BuildRotateWithGrip)
+                return;
+
+            if (!NativeVRInput.GetBoolean("GripLeft_Press"))
+            {
+                _buildRotateArmed = true;
+                return;
+            }
+
+            float x = NativeVRInput.GetVector2("ThumbstickRight").x;
+
+            if (Mathf.Abs(x) < 0.35f)
+            {
+                _buildRotateArmed = true;
+                return;
+            }
+
+            if (!_buildRotateArmed)
+                return;
+
+            _buildRotateArmed = false;
+
+            if (x < 0f)
+            {
+                PulseKey(k => k.qKey);
+                MelonLogger.Msg("[KeyboardHack] grip and stick left: rotate left");
+            }
+            else
+            {
+                // The same key the A button sends, which stays as it is: this adds a second way to
+                // reach it, on the side of the stick where turning right already lives.
+                PulseKey(k => k.rKey);
+                MelonLogger.Msg("[KeyboardHack] grip and stick right: rotate right");
+            }
+        }
+
+        /// <summary>
+        /// One button, two commands: what a tap does and what a hold does.
+        /// </summary>
+        private sealed class TapHold
+        {
+            public string Input;
+            public string TapName;
+            public string HoldName;
+            public Action Tap;
+            public Action Hold;
+
+            public bool Down;
+            public float Since;
+            public bool HoldFired;
+        }
+
+        private TapHold[] _extra;
+
+        /// <summary>
+        /// The commands the game needs that no button was left for.
+        /// <para>
+        /// Building alone wants rotate, cancel, dismantle and a third action, and the pause menu has
+        /// to be reachable without a keyboard. There are three inputs spare, so each carries two
+        /// commands, the tap being the one used constantly and the hold the one used occasionally or
+        /// regretted if it happens by accident.
+        /// </para>
+        /// <para>
+        /// The pairs are chosen so that a slip is survivable. Sleep sits behind a hold because it
+        /// takes the night away; dismantle taps because building is a loop of place and undo.
+        /// </para>
+        /// </summary>
+        private void UpdateExtraBindings()
+        {
+            if (!VRConfig.ExtraBindings)
+                return;
+
+            var keyboard = Keyboard.current;
+            if (keyboard == null)
+                return;
+
+            if (_extra == null)
+            {
+                _extra = new TapHold[]
+                {
+                    // Cancel what is being placed; held, the pause menu, which a headset has no
+                    // other way of reaching.
+                    new TapHold
+                    {
+                        Input = "ButtonLeft_X_Press",
+                        TapName = "cancel structure", HoldName = "pause menu",
+                        Tap = () => PulseKey(k => k.xKey),
+                        Hold = () => PulseKey(k => k.escapeKey)
+                    },
+
+                    // Dismantle, and held, sleep.
+                    //
+                    // On B rather than on a stick click: taking a structure apart is aimed at it,
+                    // and a thumb that has to leave the stick to press is a thumb that is not also
+                    // steering. Sleep sits behind the hold because it takes the night away.
+                    new TapHold
+                    {
+                        Input = "ButtonRight_B_Press",
+                        TapName = "dismantle", HoldName = "sleep",
+                        Tap = () => PulseKey(k => k.cKey),
+                        Hold = () => PulseKey(k => k.zKey)
+                    },
+
+                    // Reload, and held, the lighter.
+                    //
+                    // A pressed still reloads exactly as before. The lighter went here rather than
+                    // onto a stick click: pressing a stick in wears the controller out, and neither
+                    // of these is worth that.
+                    new TapHold
+                    {
+                        Input = "ButtonRight_A_Press",
+                        TapName = "reload", HoldName = "lighter",
+                        Tap = () => PulseKey(k => k.rKey),
+                        Hold = () => PulseKey(k => k.lKey)
+                    },
+
+                    // Where the runtime lets it through, the menu button does the obvious thing.
+                    new TapHold
+                    {
+                        Input = "ButtonLeft_Menu_Press",
+                        TapName = "pause menu", HoldName = null,
+                        Tap = () => PulseKey(k => k.escapeKey),
+                        Hold = null
+                    }
+                };
+            }
+
+            foreach (var binding in _extra)
+                UpdateTapHold(binding);
+        }
+
+        private void UpdateTapHold(TapHold binding)
+        {
+            bool down = NativeVRInput.GetBoolean(binding.Input);
+
+            if (down && !binding.Down)
+            {
+                binding.Down = true;
+                binding.Since = Time.time;
+                binding.HoldFired = false;
+                return;
+            }
+
+            if (down)
+            {
+                // Fired the moment the threshold passes rather than on release, so the hold is felt
+                // as having happened while the button is still down.
+                if (binding.Hold != null && !binding.HoldFired &&
+                    Time.time - binding.Since >= VRConfig.LongPressSeconds)
+                {
+                    binding.HoldFired = true;
+                    binding.Hold();
+                    MelonLogger.Msg($"[KeyboardHack] {binding.Input} held: {binding.HoldName}");
+                }
+
+                return;
+            }
+
+            if (!binding.Down)
+                return;
+
+            binding.Down = false;
+
+            // A hold has already acted; releasing it must not also tap.
+            if (binding.HoldFired)
+                return;
+
+            binding.Tap();
+            MelonLogger.Msg($"[KeyboardHack] {binding.Input} tapped: {binding.TapName}");
+        }
+
+        /// <summary>
+        /// Presses and releases a key in one go.
+        /// <para>
+        /// Two events rather than one: the game reads a key as pressed by seeing it down and then
+        /// up, and a single event that never comes back up leaves it held forever.
+        /// </para>
+        /// </summary>
+        private static void PulseKey(Func<Keyboard, UnityEngine.InputSystem.Controls.KeyControl> pick)
+        {
+            var keyboard = Keyboard.current;
+            if (keyboard == null)
+                return;
+
+            var key = pick(keyboard);
+            if (key == null)
+                return;
+
+            StateEvent.From(keyboard, out var pressEvent);
+            key.WriteValueIntoEvent(1f, pressEvent);
+            InputSystem.QueueEvent(pressEvent);
+
+            StateEvent.From(keyboard, out var releaseEvent);
+            key.WriteValueIntoEvent(0f, releaseEvent);
+            InputSystem.QueueEvent(releaseEvent);
+        }
+
+        private static void PulseMiddleMouse()
+        {
+            var mouse = Mouse.current;
+            if (mouse == null)
+                return;
+
+            StateEvent.From(mouse, out var pressEvent);
+            mouse.middleButton.WriteValueIntoEvent(1f, pressEvent);
+            InputSystem.QueueEvent(pressEvent);
+
+            StateEvent.From(mouse, out var releaseEvent);
+            mouse.middleButton.WriteValueIntoEvent(0f, releaseEvent);
+            InputSystem.QueueEvent(releaseEvent);
         }
 
         /// <summary>
