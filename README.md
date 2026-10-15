@@ -1,5 +1,5 @@
 # Sons of the Forest VR Mod (Unofficial)
-with AER, 2E, DLSS, OF + many performance improvements
+with AER, 2E (Stereo), DLSS, OF + many performance improvements
 
 Original Mod by [iPowerTech/SonsVR_Mod](https://github.com/iPowerTech/SonsVR_Mod)\
 Directly based on the Fork [Manny79/SonsVR_Mod](https://github.com/Manny79/SonsVR_Mod)
