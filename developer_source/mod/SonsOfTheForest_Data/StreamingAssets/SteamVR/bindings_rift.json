@@ -1,0 +1,187 @@
+{
+	"alias_info": {},
+	"app_key": "system.generated.sonsoftheforest.exe",
+	"bindings": {
+		"/actions/default": {
+			"chords": [],
+			"haptics": [
+				{
+					"output": "/actions/default/out/Haptic",
+					"path": "/user/hand/right/output/haptic"
+				},
+				{
+					"output": "/actions/default/out/Haptic",
+					"path": "/user/hand/left/output/haptic"
+				}
+			],
+			"poses": [
+				{
+					"output": "/actions/default/in/PoseRight",
+					"path": "/user/hand/right/pose/raw"
+				},
+				{
+					"output": "/actions/default/in/PoseLeft",
+					"path": "/user/hand/left/pose/raw"
+				}
+			],
+			"sources": [
+				{
+					"mode": "button",
+					"path": "/user/hand/right/input/a",
+					"inputs": {
+						"touch": {
+							"output": "/actions/default/in/ButtonRight_A_Touch"
+						},
+						"click": {
+							"output": "/actions/default/in/ButtonRight_A_Press"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/right/input/b",
+					"inputs": {
+						"touch": {
+							"output": "/actions/default/in/ButtonRight_B_Touch"
+						},
+						"click": {
+							"output": "/actions/default/in/ButtonRight_B_Press"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/right/input/system",
+					"inputs": {
+						"click": {
+							"output": "/actions/default/in/ButtonRight_System_Press"
+						}
+					}
+				},
+				{
+					"mode": "joystick",
+					"path": "/user/hand/right/input/joystick",
+					"inputs": {
+						"position": {
+							"output": "/actions/default/in/ThumbstickRight"
+						},
+						"touch": {
+							"output": "/actions/default/in/ThumbstickRight_Touch"
+						},
+						"click": {
+							"output": "/actions/default/in/ThumbstickRight_Press"
+						}
+					}
+				},
+				{
+					"mode": "trigger",
+					"path": "/user/hand/right/input/grip",
+					"inputs": {
+						"pull": {
+							"output": "/actions/default/in/GripRight_Value"
+						},
+						"click": {
+							"output": "/actions/default/in/GripRight_Press"
+						}
+					}
+				},
+
+				{
+					"mode": "trigger",
+					"path": "/user/hand/right/input/trigger",
+					"inputs": {
+						"click": {
+							"output": "/actions/default/in/TriggerRight_Press"
+						},
+						"touch": {
+							"output": "/actions/default/in/TriggerRight_Touch"
+						},
+						"pull": {
+							"output": "/actions/default/in/TriggerRight_Value"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/left/input/x",
+					"inputs": {
+						"touch": {
+							"output": "/actions/default/in/ButtonLeft_X_Touch"
+						},
+						"click": {
+							"output": "/actions/default/in/ButtonLeft_X_Press"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/left/input/y",
+					"inputs": {
+						"touch": {
+							"output": "/actions/default/in/ButtonLeft_Y_Touch"
+						},
+						"click": {
+							"output": "/actions/default/in/ButtonLeft_Y_Press"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/left/input/system",
+					"inputs": {
+						"click": {
+							"output": "/actions/default/in/ButtonLeft_Menu_Press"
+						}
+					}
+				},
+				{
+					"mode": "joystick",
+					"path": "/user/hand/left/input/joystick",
+					"inputs": {
+						"position": {
+							"output": "/actions/default/in/ThumbstickLeft"
+						},
+						"touch": {
+							"output": "/actions/default/in/ThumbstickLeft_Touch"
+						},
+						"click": {
+							"output": "/actions/default/in/ThumbstickLeft_Press"
+						}
+					}
+				},
+				{
+					"mode": "trigger",
+					"path": "/user/hand/left/input/grip",
+					"inputs": {
+						"pull": {
+							"output": "/actions/default/in/GripLeft_Value"
+						},
+						"click": {
+							"output": "/actions/default/in/GripLeft_Press"
+						}
+					}
+				},
+
+				{
+					"mode": "trigger",
+					"path": "/user/hand/left/input/trigger",
+					"inputs": {
+						"click": {
+							"output": "/actions/default/in/TriggerLeft_Press"
+						},
+						"touch": {
+							"output": "/actions/default/in/TriggerLeft_Touch"
+						},
+						"pull": {
+							"output": "/actions/default/in/TriggerLeft_Value"
+						}
+					}
+				}
+			]
+		}
+	},
+	"category" : "steamvr_input",
+	"controller_type": "rift",
+	"description": "Oculus Rift Touch bindings for Sons of the Forest VR",
+	"name": "SonsVR Oculus Rift Touch"
+}

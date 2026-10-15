@@ -1,0 +1,805 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>disable</Nullable>
+		<RootNamespace>SonsVRMod</RootNamespace>
+		<LangVersion>default</LangVersion>
+		<IsPackable>false</IsPackable>
+		<AssemblyVersion>1.0.0.0</AssemblyVersion>
+		<FileVersion>1.0.0.0</FileVersion>
+		<NeutralLanguage>en-US</NeutralLanguage>
+		<LangVersion>latest</LangVersion>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<PackageId>SonsVR_Mod</PackageId>
+		<!-- Local development defaults. Override either property with -p:Name=Value. -->
+		<SonsGameDir Condition="'$(SonsGameDir)' == ''">$(SONS_GAME_DIR)</SonsGameDir>
+		<BuildLabel Condition="'$(BuildLabel)' == ''">dev</BuildLabel>
+		<BuildArchiveDir>$(MSBuildProjectDirectory)\builds\$(BuildLabel)</BuildArchiveDir>
+	</PropertyGroup>
+	<ItemGroup>
+	  <EmbeddedResource Remove="Libs\**" />
+	  <None Remove="Libs\**" />
+	  <!-- V48: Unity-compiled GPU depth-stereo warp shader bundle, embedded directly into the mod DLL. -->
+	  <EmbeddedResource Include="Resources\sonsvr_depththingy" LogicalName="SonsVRMod.Resources.sonsvr_depththingy" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="Assembly-CSharp">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Assembly-CSharp.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppAdvancedTerrainGrass">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppAdvancedTerrainGrass.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppAmplifyImposters">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppAmplifyImposters.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppAnimatorEvent">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppAnimatorEvent.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppAstarPathfindingProject">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppAstarPathfindingProject.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppBacktrace.Unity">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppBacktrace.Unity.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppBlobNetworking">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppBlobNetworking.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2Cppbolt">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2Cppbolt.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppBolt.Unity">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppBolt.Unity.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2Cppbolt.user">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2Cppbolt.user.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppBulletBallistics">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppBulletBallistics.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2Cppcom.alteregogames.aeg-fsr.Runtime">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2Cppcom.alteregogames.aeg-fsr.Runtime.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2Cppcom.alteregogames.aeg-fsr.Runtime.HDRP">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2Cppcom.alteregogames.aeg-fsr.Runtime.HDRP.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2Cppcom.rlabrecque.steamworks.net">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2Cppcom.rlabrecque.steamworks.net.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppCommandLine">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppCommandLine.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppCrest">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppCrest.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppCrest.Examples">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppCrest.Examples.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppDigitalRuby.ProceduralLightning">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppDigitalRuby.ProceduralLightning.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppDrawing">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppDrawing.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppDynamicBone">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppDynamicBone.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppEndnight.Backtrace">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppEndnight.Backtrace.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppEndnight">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppEndnight.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppEndnight.Localization">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppEndnight.Localization.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppEndnight.PrefabStore">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppEndnight.PrefabStore.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppEndnight.Utilities.CommandLine">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppEndnight.Utilities.CommandLine.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppEndnight.Utilities.Configurations">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppEndnight.Utilities.Configurations.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppEndnight.Utilities.Dedicated">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppEndnight.Utilities.Dedicated.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppEndnight.Utilities.Logging">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppEndnight.Utilities.Logging.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppEndnight.Utilities.Misc">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppEndnight.Utilities.Misc.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppFMOD.Unity">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppFMOD.Unity.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppLocomotion">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppLocomotion.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppMicroSplatChanges">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppMicroSplatChanges.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppMono.Security">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppMono.Security.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2Cppmscorlib">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2Cppmscorlib.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppMultiplayer.Dedicated">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppMultiplayer.Dedicated.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppNatureManufacture.SplineSystem">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppNatureManufacture.SplineSystem.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppNewtonsoft.Json">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppNewtonsoft.Json.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppNWH.Common.AssetInfo">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppNWH.Common.AssetInfo.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppNWH.Common.Cameras">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppNWH.Common.Cameras.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppNWH.Common.CoM">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppNWH.Common.CoM.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppNWH.Common.Demo">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppNWH.Common.Demo.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppNWH.Common.FloatingOrigin">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppNWH.Common.FloatingOrigin.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppNWH.Common.Input">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppNWH.Common.Input.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppNWH.Common.NUI">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppNWH.Common.NUI.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppNWH.Common.SceneManagement">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppNWH.Common.SceneManagement.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppNWH.Common.Utility">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppNWH.Common.Utility.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppNWH.Common.Vehicle">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppNWH.Common.Vehicle.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppNWH.DWP2">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppNWH.DWP2.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppObi">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppObi.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppOSK">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppOSK.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppPackageTools">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppPackageTools.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppPathCreator">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppPathCreator.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppPathfinding.ClipperLib">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppPathfinding.ClipperLib.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppPathfinding.Ionic.Zip.Reduced">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppPathfinding.Ionic.Zip.Reduced.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppPathfinding.Poly2Tri">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppPathfinding.Poly2Tri.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppPathologicalGames">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppPathologicalGames.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppRenderStreamDepth">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppRenderStreamDepth.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppRootMotion">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppRootMotion.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppShapesRuntime">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppShapesRuntime.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppShapesSamples">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppShapesSamples.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSirenix.OdinInspector.Attributes">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSirenix.OdinInspector.Attributes.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Ai.Utilities">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Ai.Utilities.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Ai.Vail">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Ai.Vail.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Animation.Mae">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Animation.Mae.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Areas">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Areas.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Atmosphere">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Atmosphere.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Attributes">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Attributes.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Cinematics">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Cinematics.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Construction">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Construction.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Construction.Utils">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Construction.Utils.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.ConstructionBoltToken">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.ConstructionBoltToken.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Crest">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Crest.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Debug">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Debug.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Dlss">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Dlss.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Electricity">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Electricity.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Environment">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Environment.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Events">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Events.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Extensions">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Extensions.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.FieldOfView">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.FieldOfView.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.FMOD">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.FMOD.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.FpsUtility">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.FpsUtility.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.GameApplication">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.GameApplication.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Gameplay.GameSetup">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Gameplay.GameSetup.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Gameplay.LevelProps">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Gameplay.LevelProps.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Gameplay.StatusEffects">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Gameplay.StatusEffects.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Geometry">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Geometry.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Gui.Colors">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Gui.Colors.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Gui">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Gui.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Gui.Multiplayer">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Gui.Multiplayer.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Gui.Multiplayer.Notifications">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Gui.Multiplayer.Notifications.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Gui.Options">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Gui.Options.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Gui.VersionUpgrade">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Gui.VersionUpgrade.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Hardware">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Hardware.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Input">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Input.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Interfaces">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Interfaces.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Item">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Item.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Loading">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Loading.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Lodding">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Lodding.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Multiplayer.Configurations">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Multiplayer.Configurations.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Multiplayer">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Multiplayer.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Multiplayer.NamedIntIds">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Multiplayer.NamedIntIds.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.ObsoleteMonos">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.ObsoleteMonos.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Physics">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Physics.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.PostProcessing">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.PostProcessing.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.PostProcessing.FoundFootage">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.PostProcessing.FoundFootage.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Quality">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Quality.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Ragdoll">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Ragdoll.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Rendering">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Rendering.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Rocks">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Rocks.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Save">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Save.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Scratchpad">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Scratchpad.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Settings">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Settings.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.SettingsWrappers">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.SettingsWrappers.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.SonsTerrain">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.SonsTerrain.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.StatSystem">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.StatSystem.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.SteamTimelineExtended">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.SteamTimelineExtended.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Subtitles">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Subtitles.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Subtitles.Tooling">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Subtitles.Tooling.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Testing">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Testing.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Tests">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Tests.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Trees">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Trees.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.UiElements">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.UiElements.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Utilities">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Utilities.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.VFX">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.VFX.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.VFX.SimpleUnderwater">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.VFX.SimpleUnderwater.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSons.Weapon">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSons.Weapon.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSonsTerrainScripts">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSonsTerrainScripts.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppStreamingAssetsManager">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppStreamingAssetsManager.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.Configuration">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSystem.Configuration.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.Core">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSystem.Core.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.Data">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSystem.Data.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSystem.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.IO.Compression">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSystem.IO.Compression.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.IO.Compression.FileSystem">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSystem.IO.Compression.FileSystem.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.Numerics">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSystem.Numerics.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.Runtime.Serialization">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSystem.Runtime.Serialization.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.Xml">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSystem.Xml.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.Xml.Linq">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppSystem.Xml.Linq.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppTayx.Graphy">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppTayx.Graphy.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppTheForest.Commons">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppTheForest.Commons.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppTheForest.Modding">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppTheForest.Modding.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppTheForest.Utils">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppTheForest.Utils.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2Cppudpkit.common">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2Cppudpkit.common.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2Cppudpkit">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2Cppudpkit.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppUpgen.Lighting">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppUpgen.Lighting.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppVFXGraph.OutputEventHandlers">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppVFXGraph.OutputEventHandlers.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppVolumetricBloodFX">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2CppVolumetricBloodFX.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2Cpp__Generated">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Il2Cpp__Generated.dll</HintPath>
+		</Reference>
+		<Reference Include="SonsSteamVR_IL2CPP">
+		  <HintPath>MelonLoaderUserLibs\SonsSteamVR_IL2CPP.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.Addressables">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Unity.Addressables.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.Burst">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Unity.Burst.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.Burst.Unsafe">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Unity.Burst.Unsafe.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.Collections">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Unity.Collections.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.Collections.LowLevel.ILSupport">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Unity.Collections.LowLevel.ILSupport.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.CrossSceneReference">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Unity.CrossSceneReference.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.InputSystem">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Unity.InputSystem.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.Localization">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Unity.Localization.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.Mathematics">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Unity.Mathematics.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.RenderPipelines.BatchRendererGroup-Testing">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Unity.RenderPipelines.BatchRendererGroup-Testing.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.RenderPipelines.Core.Runtime">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Unity.RenderPipelines.Core.Runtime.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.RenderPipelines.HighDefinition.Config.Runtime">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Unity.RenderPipelines.HighDefinition.Config.Runtime.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.RenderPipelines.HighDefinition.Runtime">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Unity.RenderPipelines.HighDefinition.Runtime.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.ResourceManager">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Unity.ResourceManager.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.Splines">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Unity.Splines.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.TextMeshPro">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Unity.TextMeshPro.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.Timeline">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Unity.Timeline.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.VisualEffectGraph.Runtime">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\Unity.VisualEffectGraph.Runtime.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.AccessibilityModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.AccessibilityModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.AIModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.AIModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.AndroidJNIModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.AndroidJNIModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.AnimationModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.AnimationModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.ARModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.ARModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.AssetBundleModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.AssetBundleModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.AudioModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.AudioModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.ClothModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.ClothModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.ContentLoadModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.ContentLoadModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.CoreModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.CoreModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.CrashReportingModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.CrashReportingModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.DirectorModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.DirectorModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.DSPGraphModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.DSPGraphModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.GameCenterModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.GameCenterModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.GIModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.GIModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.GridModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.GridModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.HotReloadModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.HotReloadModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.ImageConversionModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.ImageConversionModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.IMGUIModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.IMGUIModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.InputLegacyModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.InputLegacyModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.InputModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.InputModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.JSONSerializeModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.JSONSerializeModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.LocalizationModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.LocalizationModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.NVIDIAModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.NVIDIAModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.ParticleSystemModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.ParticleSystemModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.PerformanceReportingModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.PerformanceReportingModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.Physics2DModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.Physics2DModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.PhysicsModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.PhysicsModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.ProfilerModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.ProfilerModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.PropertiesModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.PropertiesModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.ScreenCaptureModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.ScreenCaptureModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.SharedInternalsModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.SharedInternalsModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.SpriteMaskModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.SpriteMaskModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.SpriteShapeModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.SpriteShapeModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.StreamingModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.StreamingModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.SubstanceModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.SubstanceModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.SubsystemsModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.SubsystemsModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.TerrainModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.TerrainModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.TerrainPhysicsModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.TerrainPhysicsModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.TextCoreFontEngineModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.TextCoreFontEngineModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.TextCoreTextEngineModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.TextCoreTextEngineModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.TextRenderingModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.TextRenderingModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.TilemapModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.TilemapModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.TLSModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.TLSModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UI">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.UI.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UIElementsModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.UIElementsModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UIModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.UIModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UmbraModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.UmbraModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UnityAnalyticsCommonModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.UnityAnalyticsCommonModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UnityAnalyticsModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.UnityAnalyticsModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UnityConnectModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.UnityConnectModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UnityCurlModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.UnityCurlModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UnityTestProtocolModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.UnityTestProtocolModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UnityWebRequestAssetBundleModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.UnityWebRequestAssetBundleModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UnityWebRequestAudioModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.UnityWebRequestAudioModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UnityWebRequestModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.UnityWebRequestModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UnityWebRequestTextureModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.UnityWebRequestTextureModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.UnityWebRequestWWWModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.UnityWebRequestWWWModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.VehiclesModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.VehiclesModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.VFXModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.VFXModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.VideoModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.VideoModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.VRModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.VRModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.WindModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.WindModule.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.XRModule">
+			<HintPath>$(SonsGameDir)\MelonLoader\Il2CppAssemblies\UnityEngine.XRModule.dll</HintPath>
+		</Reference>
+		<Reference Include="MelonLoader">
+			<HintPath>$(SonsGameDir)\MelonLoader\net6\MelonLoader.dll</HintPath>
+		</Reference>
+		<Reference Include="0Harmony">
+			<HintPath>$(SonsGameDir)\MelonLoader\net6\0Harmony.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppInterop.Runtime">
+			<HintPath>$(SonsGameDir)\MelonLoader\net6\Il2CppInterop.Runtime.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppInterop.Common">
+			<HintPath>$(SonsGameDir)\MelonLoader\net6\Il2CppInterop.Common.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.Il2CppAssetBundleManager">
+			<HintPath>$(SonsGameDir)\MelonLoader\net6\UnityEngine.Il2CppAssetBundleManager.dll</HintPath>
+		</Reference>
+
+	</ItemGroup>
+
+	<PropertyGroup>
+		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+		<EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile Include="Input\NativeVRInput.cs" />
+		<Compile Include="Input\KeyboardHack.cs" />
+		<Compile Include="ReflectionUtil.cs" />
+		<Compile Include="SonsVRMod.cs" />
+		<Compile Include="AerCalibrationV139.cs" />
+		<Compile Include="StereoRender.cs" />
+		<Compile Include="HudStereoReprojectV60.cs" />
+		<Compile Include="HDRPDlssRuntimeTraceV78.cs" />
+		<Compile Include="EyeDepthCaptureCustomPassV81.cs" />
+		<Compile Include="EyeMotionCaptureCustomPassV89.cs" />
+		<Compile Include="NvOpticalFlowV90.cs" />
+		<Compile Include="DlssRuntimeV91.cs" />
+		<Compile Include="NativeDlssLiveResolutionTraceV129.cs" />
+		<Compile Include="NativeDlssOptimalOverrideV130.cs" />
+		<Compile Include="NativeDlssForceActivationV131.cs" />
+        <Compile Include="NativeDlssForensicsV132.cs" />
+        <Compile Include="NvidiaFeatureTraceV132.cs" />
+        <Compile Include="NativeDlssFeatureStateV133.cs" />
+        <Compile Include="NativeDlssCameraScaleV136.cs" />
+        <Compile Include="NativeDlssContractTraceV127.cs" />
+		<Compile Include="NativeDlssReceiverRouterV128.cs" />
+		<Compile Include="TransitionDlssAuditV117.cs" />
+		<Compile Include="Utils.cs" />
+		<Compile Include="Input\VRInput.cs" />
+		<Compile Include="VRPlayer.cs" />
+		<Compile Include="VRSystem.cs" />
+		<Compile Include="RuntimeSettingsV105.cs" />
+		<Compile Include="NativeHudCompositorV114.cs" />
+		<Compile Include="UnifiedHudWorldPlaneV116.cs" />
+		<Compile Include="CameraCompositorAuditV114.cs" />
+		<Compile Include="PerformanceForensicsV106.cs" />
+        <Compile Include="ManualPauseFpsTraceV144.cs" />
+        <Compile Include="BookletPassiveTraceV151.cs" />
+        <Compile Include="BookletGazeV161.cs" />
+		<Compile Include="VRUiToolkit.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Actions\" />
+	</ItemGroup>
+	
+	<!-- Never auto-install experimental builds into the live game. Archive the DLL/PDB locally. -->
+	<Target Name="ArchiveNamedBuild" AfterTargets="Build">
+		<MakeDir Directories="$(BuildArchiveDir)" />
+		<Copy SourceFiles="$(TargetPath)" DestinationFiles="$(BuildArchiveDir)\SonsVR_Mod.dll" />
+		<Copy Condition="Exists('$(TargetDir)$(TargetName).pdb')" SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFiles="$(BuildArchiveDir)\SonsVR_Mod.pdb" />
+	</Target>
+</Project>

@@ -1,0 +1,780 @@
+#pragma kernel BlockMatch
+#pragma kernel TileStats
+#pragma kernel WarpField
+#pragma kernel MotionField
+#pragma kernel OpticalFlowField
+#pragma kernel DepthField
+#pragma kernel CoverageField
+#pragma kernel SceneStructureField
+#pragma kernel DepthClassStatsV101
+#pragma kernel SkyRayClassFieldV101
+#pragma kernel OcclusionClassStatsV102
+#pragma kernel OcclusionComplexityFieldV102
+#pragma kernel DepthColorRiskFieldV102
+#pragma target 5.0
+
+Texture2D<float4> _Candidate;
+Texture2D<float4> _Truth;
+Texture2D<float> _TruthDepth;
+Texture2D<float> _HistoryDepth;
+Texture2D<float2> _Motion;
+Texture2D<int2> _OpticalFlow;
+Texture2D<uint> _SourceIndex;
+RWTexture2D<float4> _Atlas;
+
+float4 _ZBufferParams;
+float4 _PresentationSize; // W,H,1/W,1/H
+float4 _TruthDepthSize;   // W,H,1/W,1/H
+float4 _HistoryDepthSize; // W,H,1/W,1/H
+float4 _MotionSize;       // W,H,1/W,1/H
+float4 _FlowSize;         // W,H,1/W,1/H
+float4 _TileGrid;         // cols,rows,1/cols,1/rows
+int _OutBand;
+int _OutBand2;
+int _SearchRadius;
+int _PatchRadius;
+int _PatchStride;
+int _DepthClassV101; // 0:<2m, 1:2-10m, 2:10-50m, 3:>=50m finite, 4:no-depth/sky-like
+int _OcclusionClassV102; // 0 stable-no-depth, 1 current-no/history-finite, 2 current-finite/history-no, 3 finite-agree, 4 history-nearer(disocclusion), 5 history-farther(new occluder)
+
+float4x4 _HistoryInvGpuProjection;
+float4x4 _HistoryCameraToWorld;
+float4x4 _TargetWorldToCamera;
+float4x4 _TargetGpuProjection;
+float4x4 _CurrentInvGpuProjection;
+float4x4 _CurrentCameraToWorld;
+float4x4 _PreviousWorldToCamera;
+float4x4 _PreviousGpuProjection;
+
+static const uint INVALID_U32 = 0xFFFFFFFFu;
+
+float Luma(float3 c)
+{
+    return dot(c, float3(0.2126, 0.7152, 0.0722));
+}
+
+float LinearEyeDepthFromRaw(float rawDepth)
+{
+    return rcp(_ZBufferParams.z * rawDepth + _ZBufferParams.w);
+}
+
+bool IsFinite2(float2 v)
+{
+    return all(v == v) && abs(v.x) < 1.0e6 && abs(v.y) < 1.0e6;
+}
+
+uint2 PixelFromUv(float2 uv, float4 size)
+{
+    uint2 p = uint2(floor(saturate(uv) * size.xy));
+    p.x = min(p.x, (uint)size.x - 1u);
+    p.y = min(p.y, (uint)size.y - 1u);
+    return p;
+}
+
+bool TruthWorldAtPresentationPixel(int2 p)
+{
+    float2 uv = (float2(p) + 0.5) * _PresentationSize.zw;
+    uint2 dp = PixelFromUv(uv, _TruthDepthSize);
+    float d = _TruthDepth.Load(int3((int)dp.x, (int)dp.y, 0));
+    return d > 1.0e-8;
+}
+
+void TileBounds(uint2 tile, out int2 lo, out int2 hi, out int2 center)
+{
+    float2 f0 = float2(tile) * _TileGrid.zw;
+    float2 f1 = float2(tile + 1u) * _TileGrid.zw;
+    lo = int2(floor(f0 * _PresentationSize.xy));
+    hi = int2(floor(f1 * _PresentationSize.xy));
+    hi = max(hi, lo + 1);
+    hi = min(hi, int2((int)_PresentationSize.x, (int)_PresentationSize.y));
+    center = (lo + hi) / 2;
+}
+
+[numthreads(1,1,1)]
+void BlockMatch(uint3 id : SV_DispatchThreadID)
+{
+    uint cols = (uint)_TileGrid.x;
+    uint rows = (uint)_TileGrid.y;
+    if (id.x >= cols || id.y >= rows) return;
+
+    int2 lo, hi, center;
+    TileBounds(id.xy, lo, hi, center);
+
+    int radius = max(0, _SearchRadius);
+    int patch = max(4, _PatchRadius);
+    int stride = max(1, _PatchStride);
+
+    float best = 1.0e30;
+    float second = 1.0e30;
+    float zero = 1.0e30;
+    int bestDx = 0, bestDy = 0;
+
+    for (int dy = -radius; dy <= radius; ++dy)
+    {
+        for (int dx = -radius; dx <= radius; ++dx)
+        {
+            float sad = 0.0;
+            int n = 0;
+            for (int oy = -patch; oy <= patch; oy += stride)
+            {
+                for (int ox = -patch; ox <= patch; ox += stride)
+                {
+                    int2 cp = center + int2(ox, oy);
+                    int2 tp = cp + int2(dx, dy);
+                    if (cp.x < 0 || cp.y < 0 || cp.x >= (int)_PresentationSize.x || cp.y >= (int)_PresentationSize.y ||
+                        tp.x < 0 || tp.y < 0 || tp.x >= (int)_PresentationSize.x || tp.y >= (int)_PresentationSize.y)
+                        continue;
+                    if (!TruthWorldAtPresentationPixel(tp))
+                        continue;
+
+                    float a = Luma(_Candidate.Load(int3(cp, 0)).rgb);
+                    float b = Luma(_Truth.Load(int3(tp, 0)).rgb);
+                    sad += abs(a - b);
+                    n++;
+                }
+            }
+            if (n < 8) continue;
+            sad /= n;
+            if (dx == 0 && dy == 0) zero = sad;
+            if (sad < best)
+            {
+                second = best;
+                best = sad;
+                bestDx = dx;
+                bestDy = dy;
+            }
+            else if (sad < second)
+            {
+                second = sad;
+            }
+        }
+    }
+
+    if (best > 1.0e20)
+    {
+        _Atlas[int2((int)id.x, _OutBand * (int)rows + (int)id.y)] = float4(0,0,-1,-1);
+        return;
+    }
+
+    // W stores the SECOND-best SAD.  This lets CPU reject flat sky / repetitive tiles
+    // where every shift is equally good instead of inventing an arbitrary +/-search-radius
+    // angular error.  TileStats separately measures zero-shift image error.
+    float secondOut = second < 1.0e20 ? second : best;
+    _Atlas[int2((int)id.x, _OutBand * (int)rows + (int)id.y)] =
+        float4((float)bestDx, (float)bestDy, best, secondOut);
+}
+
+[numthreads(1,1,1)]
+void TileStats(uint3 id : SV_DispatchThreadID)
+{
+    uint cols = (uint)_TileGrid.x;
+    uint rows = (uint)_TileGrid.y;
+    if (id.x >= cols || id.y >= rows) return;
+
+    int2 lo, hi, center;
+    TileBounds(id.xy, lo, hi, center);
+    int sx = max(1, (hi.x - lo.x) / 12);
+    int sy = max(1, (hi.y - lo.y) / 12);
+
+    float sumAbs = 0.0;
+    float sumSq = 0.0;
+    float sumWeighted = 0.0;
+    float sumWeight = 0.0;
+    float covered = 0.0;
+    int n = 0;
+
+    for (int y = lo.y; y < hi.y; y += sy)
+    {
+        for (int x = lo.x; x < hi.x; x += sx)
+        {
+            int2 p = int2(x,y);
+            if (!TruthWorldAtPresentationPixel(p)) continue;
+            float4 c = _Candidate.Load(int3(p,0));
+            float4 t = _Truth.Load(int3(p,0));
+            float e = abs(Luma(c.rgb) - Luma(t.rgb));
+            sumAbs += e;
+            sumSq += e * e;
+            covered += step(0.001, c.a);
+
+            int2 px0 = int2(max(0,x-1),y);
+            int2 px1 = int2(min((int)_PresentationSize.x-1,x+1),y);
+            int2 py0 = int2(x,max(0,y-1));
+            int2 py1 = int2(x,min((int)_PresentationSize.y-1,y+1));
+            float gx = abs(Luma(_Truth.Load(int3(px1,0)).rgb) - Luma(_Truth.Load(int3(px0,0)).rgb));
+            float gy = abs(Luma(_Truth.Load(int3(py1,0)).rgb) - Luma(_Truth.Load(int3(py0,0)).rgb));
+            float w = 1.0 + 4.0 * saturate(gx + gy);
+            sumWeighted += e * w;
+            sumWeight += w;
+            n++;
+        }
+    }
+
+    float inv = n > 0 ? 1.0 / n : 0.0;
+    float mae = sumAbs * inv;
+    float rmse = sqrt(max(0.0, sumSq * inv));
+    float edgeMae = sumWeight > 0.0 ? sumWeighted / sumWeight : 0.0;
+    float coverage = covered * inv;
+    _Atlas[int2((int)id.x, _OutBand * (int)rows + (int)id.y)] = float4(mae, rmse, edgeMae, coverage);
+}
+
+bool ReconstructWorld(float2 uv, Texture2D<float> depthTex, float4 depthSize,
+                      float4x4 invProj, float4x4 cameraToWorld,
+                      out float3 world, out float rawDepth)
+{
+    uint2 dp = PixelFromUv(uv, depthSize);
+    rawDepth = depthTex.Load(int3((int)dp.x,(int)dp.y,0));
+    if (rawDepth <= 1.0e-8) { world=0; return false; }
+    float2 ndc = float2(uv.x*2.0-1.0, 1.0-uv.y*2.0);
+    float4 vh = mul(invProj, float4(ndc, rawDepth, 1.0));
+    if (abs(vh.w) <= 1.0e-8) { world=0; return false; }
+    float3 view = vh.xyz / vh.w;
+    world = mul(cameraToWorld, float4(view,1.0)).xyz;
+    return true;
+}
+
+bool ProjectUv(float3 world, float4x4 worldToCamera, float4x4 gpuProj, out float2 uv)
+{
+    float4 v = mul(worldToCamera, float4(world,1.0));
+    float4 c = mul(gpuProj, v);
+    if (c.w <= 1.0e-6) { uv=0; return false; }
+    float2 ndc = c.xy / c.w;
+    uv = float2(ndc.x*0.5+0.5, 0.5-ndc.y*0.5);
+    return all(uv == uv);
+}
+
+[numthreads(1,1,1)]
+void WarpField(uint3 id : SV_DispatchThreadID)
+{
+    uint cols=(uint)_TileGrid.x, rows=(uint)_TileGrid.y;
+    if(id.x>=cols||id.y>=rows) return;
+    float2 tile0=float2(id.xy)*_TileGrid.zw;
+    float2 tile1=float2(id.xy+1u)*_TileGrid.zw;
+    float2 sum=0; float sumMag=0; int n=0;
+    const int S=8;
+    for(int sy=0;sy<S;sy++) for(int sx=0;sx<S;sx++)
+    {
+        float2 uv=lerp(tile0,tile1,(float2(sx,sy)+0.5)/S);
+        float3 world; float raw;
+        if(!ReconstructWorld(uv,_HistoryDepth,_HistoryDepthSize,_HistoryInvGpuProjection,_HistoryCameraToWorld,world,raw)) continue;
+        float2 tuv;
+        if(!ProjectUv(world,_TargetWorldToCamera,_TargetGpuProjection,tuv)) continue;
+        float2 d=(tuv-uv)*_PresentationSize.xy;
+        if(!IsFinite2(d)) continue;
+        sum+=d; sumMag+=length(d); n++;
+    }
+    float inv=n>0?1.0/n:0.0;
+    _Atlas[int2((int)id.x,_OutBand*(int)rows+(int)id.y)]=float4(sum*inv,sumMag*inv,n/(float)(S*S));
+}
+
+[numthreads(1,1,1)]
+void MotionField(uint3 id : SV_DispatchThreadID)
+{
+    uint cols=(uint)_TileGrid.x, rows=(uint)_TileGrid.y;
+    if(id.x>=cols||id.y>=rows) return;
+    float2 tile0=float2(id.xy)*_TileGrid.zw;
+    float2 tile1=float2(id.xy+1u)*_TileGrid.zw;
+    float2 sumTotal=0,sumCam=0,sumResidual=0; float sumResidualMag=0; int n=0, invalid=0;
+    const int S=8;
+    for(int sy=0;sy<S;sy++) for(int sx=0;sx<S;sx++)
+    {
+        float2 uv=lerp(tile0,tile1,(float2(sx,sy)+0.5)/S);
+        float3 world; float raw;
+        if(!ReconstructWorld(uv,_TruthDepth,_TruthDepthSize,_CurrentInvGpuProjection,_CurrentCameraToWorld,world,raw)) continue;
+        uint2 mp=PixelFromUv(uv,_MotionSize);
+        float2 total=_Motion.Load(int3((int)mp.x,(int)mp.y,0));
+        if(total.x>1.0 || !IsFinite2(total)){invalid++;continue;}
+        float2 prevUv;
+        if(!ProjectUv(world,_PreviousWorldToCamera,_PreviousGpuProjection,prevUv)){invalid++;continue;}
+        float2 camera=uv-prevUv;
+        float2 residual=total-camera;
+        sumTotal += total*_PresentationSize.xy;
+        sumCam += camera*_PresentationSize.xy;
+        sumResidual += residual*_PresentationSize.xy;
+        sumResidualMag += length(residual*_PresentationSize.xy);
+        n++;
+    }
+    float inv=n>0?1.0/n:0.0;
+    _Atlas[int2((int)id.x,_OutBand*(int)rows+(int)id.y)] = float4(sumTotal*inv,sumCam*inv);
+    _Atlas[int2((int)id.x,_OutBand2*(int)rows+(int)id.y)] = float4(sumResidual*inv,sumResidualMag*inv,n/(float)(S*S));
+}
+
+[numthreads(1,1,1)]
+void OpticalFlowField(uint3 id : SV_DispatchThreadID)
+{
+    uint cols=(uint)_TileGrid.x, rows=(uint)_TileGrid.y;
+    if(id.x>=cols||id.y>=rows) return;
+    float2 tile0=float2(id.xy)*_TileGrid.zw;
+    float2 tile1=float2(id.xy+1u)*_TileGrid.zw;
+    float2 sumTotal=0,sumCam=0,sumResidual=0; float sumResidualMag=0; int n=0;
+    const int S=8;
+    for(int sy=0;sy<S;sy++) for(int sx=0;sx<S;sx++)
+    {
+        float2 uv=lerp(tile0,tile1,(float2(sx,sy)+0.5)/S);
+        float3 world; float raw;
+        if(!ReconstructWorld(uv,_HistoryDepth,_HistoryDepthSize,_HistoryInvGpuProjection,_HistoryCameraToWorld,world,raw)) continue;
+        uint2 fp=PixelFromUv(uv,_FlowSize);
+        int2 rv=_OpticalFlow.Load(int3((int)fp.x,(int)fp.y,0));
+        float2 totalPx=float2(rv)*(1.0/32.0);
+        float2 prevUv;
+        if(!ProjectUv(world,_PreviousWorldToCamera,_PreviousGpuProjection,prevUv)) continue;
+        float2 camPx=(prevUv-uv)*_FlowSize.xy;
+        float2 residualPx=totalPx-camPx;
+        float2 totalPres=(totalPx*_FlowSize.zw)*_PresentationSize.xy;
+        float2 camPres=(camPx*_FlowSize.zw)*_PresentationSize.xy;
+        float2 resPres=(residualPx*_FlowSize.zw)*_PresentationSize.xy;
+        if(!IsFinite2(resPres)) continue;
+        sumTotal+=totalPres; sumCam+=camPres; sumResidual+=resPres; sumResidualMag+=length(resPres); n++;
+    }
+    float inv=n>0?1.0/n:0.0;
+    _Atlas[int2((int)id.x,_OutBand*(int)rows+(int)id.y)] = float4(sumTotal*inv,sumCam*inv);
+    _Atlas[int2((int)id.x,_OutBand2*(int)rows+(int)id.y)] = float4(sumResidual*inv,sumResidualMag*inv,n/(float)(S*S));
+}
+
+[numthreads(1,1,1)]
+void DepthField(uint3 id : SV_DispatchThreadID)
+{
+    uint cols=(uint)_TileGrid.x, rows=(uint)_TileGrid.y;
+    if(id.x>=cols||id.y>=rows) return;
+    float2 tile0=float2(id.xy)*_TileGrid.zw;
+    float2 tile1=float2(id.xy+1u)*_TileGrid.zw;
+    float sum=0,minD=1.0e30,maxD=0; int n=0;
+    const int S=8;
+    for(int sy=0;sy<S;sy++) for(int sx=0;sx<S;sx++)
+    {
+        float2 uv=lerp(tile0,tile1,(float2(sx,sy)+0.5)/S);
+        uint2 dp=PixelFromUv(uv,_HistoryDepthSize);
+        float raw=_HistoryDepth.Load(int3((int)dp.x,(int)dp.y,0));
+        if(raw<=1.0e-8) continue;
+        float d=LinearEyeDepthFromRaw(raw);
+        if(!(d>0.0) || d>1.0e7) continue;
+        sum+=d; minD=min(minD,d); maxD=max(maxD,d); n++;
+    }
+    float inv=n>0?1.0/n:0.0;
+    _Atlas[int2((int)id.x,_OutBand*(int)rows+(int)id.y)] = float4(sum*inv,n>0?minD:0,maxD,n/(float)(S*S));
+}
+
+[numthreads(1,1,1)]
+void CoverageField(uint3 id : SV_DispatchThreadID)
+{
+    uint cols=(uint)_TileGrid.x, rows=(uint)_TileGrid.y;
+    if(id.x>=cols||id.y>=rows) return;
+    int2 lo,hi,center; TileBounds(id.xy,lo,hi,center);
+    int sx=max(1,(hi.x-lo.x)/16), sy=max(1,(hi.y-lo.y)/16);
+    int n=0,valid=0;
+    for(int y=lo.y;y<hi.y;y+=sy) for(int x=lo.x;x<hi.x;x+=sx)
+    {
+        uint v=_SourceIndex.Load(int3(x,y,0));
+        valid += (v != INVALID_U32) ? 1 : 0;
+        n++;
+    }
+    float frac=n>0?valid/(float)n:0.0;
+    _Atlas[int2((int)id.x,_OutBand*(int)rows+(int)id.y)] = float4(frac,0,0,0);
+}
+
+
+[numthreads(1,1,1)]
+void SceneStructureField(uint3 id : SV_DispatchThreadID)
+{
+    uint cols=(uint)_TileGrid.x, rows=(uint)_TileGrid.y;
+    if(id.x>=cols||id.y>=rows) return;
+    float2 tile0=float2(id.xy)*_TileGrid.zw;
+    float2 tile1=float2(id.xy+1u)*_TileGrid.zw;
+    float sumL=0.0, sumL2=0.0, sumGrad=0.0;
+    int n=0, depthEdges=0, depthPairs=0;
+    const int S=8;
+    for(int sy=0;sy<S;sy++) for(int sx=0;sx<S;sx++)
+    {
+        float2 uv=lerp(tile0,tile1,(float2(sx,sy)+0.5)/S);
+        uint2 pp=PixelFromUv(uv,_PresentationSize);
+        float l=Luma(_Truth.Load(int3((int)pp.x,(int)pp.y,0)).rgb);
+        uint2 pr=uint2(min(pp.x+1u,(uint)_PresentationSize.x-1u),pp.y);
+        uint2 pd=uint2(pp.x,min(pp.y+1u,(uint)_PresentationSize.y-1u));
+        float lr=Luma(_Truth.Load(int3((int)pr.x,(int)pr.y,0)).rgb);
+        float ld=Luma(_Truth.Load(int3((int)pd.x,(int)pd.y,0)).rgb);
+        sumL+=l; sumL2+=l*l; sumGrad+=abs(lr-l)+abs(ld-l); n++;
+
+        uint2 dp=PixelFromUv(uv,_TruthDepthSize);
+        uint2 dr=uint2(min(dp.x+1u,(uint)_TruthDepthSize.x-1u),dp.y);
+        uint2 dd=uint2(dp.x,min(dp.y+1u,(uint)_TruthDepthSize.y-1u));
+        float r0=_TruthDepth.Load(int3((int)dp.x,(int)dp.y,0));
+        float rr=_TruthDepth.Load(int3((int)dr.x,(int)dr.y,0));
+        float rd=_TruthDepth.Load(int3((int)dd.x,(int)dd.y,0));
+        if(r0>1e-8 && rr>1e-8)
+        {
+            float d0=LinearEyeDepthFromRaw(r0), d1=LinearEyeDepthFromRaw(rr);
+            if(d0>0 && d1>0){ depthPairs++; if(abs(d0-d1)>max(0.25,0.05*min(d0,d1))) depthEdges++; }
+        }
+        if(r0>1e-8 && rd>1e-8)
+        {
+            float d0=LinearEyeDepthFromRaw(r0), d1=LinearEyeDepthFromRaw(rd);
+            if(d0>0 && d1>0){ depthPairs++; if(abs(d0-d1)>max(0.25,0.05*min(d0,d1))) depthEdges++; }
+        }
+    }
+    float inv=n>0?1.0/n:0.0;
+    float mean=sumL*inv;
+    float stddev=sqrt(max(0.0,sumL2*inv-mean*mean));
+    float grad=sumGrad*inv;
+    float depthEdgeFrac=depthPairs>0?depthEdges/(float)depthPairs:0.0;
+    _Atlas[int2((int)id.x,_OutBand*(int)rows+(int)id.y)] = float4(mean,stddev,grad,depthEdgeFrac);
+}
+
+
+// -----------------------------------------------------------------------------
+// V101: directly measure the thing V99/V100 TileStats intentionally excluded:
+// truth pixels with NO camera-local opaque depth (HDRP sky/background and some
+// alpha/LOD content).  Finite truth is also bucketed by distance to test the
+// user's "feet/grass are stable, sky/far field is cursed" observation.
+// Output: MAE / RMSE / edge-weighted MAE / fraction-of-tile in this depth class.
+// -----------------------------------------------------------------------------
+bool PixelMatchesDepthClassV101(int2 p)
+{
+    float2 uv = (float2(p) + 0.5) * _PresentationSize.zw;
+    uint2 dp = PixelFromUv(uv, _TruthDepthSize);
+    float raw = _TruthDepth.Load(int3((int)dp.x, (int)dp.y, 0));
+
+    if (raw <= 1.0e-8)
+        return _DepthClassV101 == 4;
+
+    float d = LinearEyeDepthFromRaw(raw);
+    if (!(d > 0.0) || d > 1.0e7)
+        return _DepthClassV101 == 4;
+
+    if (_DepthClassV101 == 0) return d < 2.0;
+    if (_DepthClassV101 == 1) return d >= 2.0 && d < 10.0;
+    if (_DepthClassV101 == 2) return d >= 10.0 && d < 50.0;
+    if (_DepthClassV101 == 3) return d >= 50.0;
+    return false;
+}
+
+[numthreads(1,1,1)]
+void DepthClassStatsV101(uint3 id : SV_DispatchThreadID)
+{
+    uint cols=(uint)_TileGrid.x, rows=(uint)_TileGrid.y;
+    if(id.x>=cols||id.y>=rows) return;
+
+    int2 lo,hi,center; TileBounds(id.xy,lo,hi,center);
+    int sx=max(1,(hi.x-lo.x)/12), sy=max(1,(hi.y-lo.y)/12);
+    float sumAbs=0.0, sumSq=0.0, sumWeighted=0.0, sumWeight=0.0;
+    int nClass=0, nTotal=0;
+
+    for(int y=lo.y;y<hi.y;y+=sy) for(int x=lo.x;x<hi.x;x+=sx)
+    {
+        int2 p=int2(x,y);
+        nTotal++;
+        if(!PixelMatchesDepthClassV101(p)) continue;
+
+        float4 c=_Candidate.Load(int3(p,0));
+        float4 t=_Truth.Load(int3(p,0));
+        float e=abs(Luma(c.rgb)-Luma(t.rgb));
+        sumAbs+=e; sumSq+=e*e;
+
+        int2 px0=int2(max(0,x-1),y);
+        int2 px1=int2(min((int)_PresentationSize.x-1,x+1),y);
+        int2 py0=int2(x,max(0,y-1));
+        int2 py1=int2(x,min((int)_PresentationSize.y-1,y+1));
+        float gx=abs(Luma(_Truth.Load(int3(px1,0)).rgb)-Luma(_Truth.Load(int3(px0,0)).rgb));
+        float gy=abs(Luma(_Truth.Load(int3(py1,0)).rgb)-Luma(_Truth.Load(int3(py0,0)).rgb));
+        float w=1.0+4.0*saturate(gx+gy);
+        sumWeighted+=e*w; sumWeight+=w; nClass++;
+    }
+
+    float inv=nClass>0?1.0/nClass:0.0;
+    float frac=nTotal>0?nClass/(float)nTotal:0.0;
+    _Atlas[int2((int)id.x,_OutBand*(int)rows+(int)id.y)] = float4(
+        sumAbs*inv,
+        sqrt(max(0.0,sumSq*inv)),
+        sumWeight>0.0?sumWeighted/sumWeight:0.0,
+        frac);
+}
+
+bool RotationMappedSourceUvV101(float2 currentUv, out float2 sourceUv)
+{
+    float2 currentNdc=float2(currentUv.x*2.0-1.0,1.0-currentUv.y*2.0);
+    float4 currentViewH=mul(_CurrentInvGpuProjection,float4(currentNdc,0.5,1.0));
+    if(abs(currentViewH.w)<=1.0e-8){sourceUv=0;return false;}
+    float3 currentViewDir=currentViewH.xyz/currentViewH.w;
+    float3 worldDir=mul(_CurrentCameraToWorld,float4(currentViewDir,0.0)).xyz;
+    float3 sourceViewDir=mul(_PreviousWorldToCamera,float4(worldDir,0.0)).xyz;
+    float4 sourceClip=mul(_PreviousGpuProjection,float4(sourceViewDir,1.0));
+    if(!(sourceClip.w>1.0e-6)){sourceUv=0;return false;}
+    float2 sourceNdc=sourceClip.xy/sourceClip.w;
+    sourceUv=float2(sourceNdc.x*0.5+0.5,0.5-sourceNdc.y*0.5);
+    return all(sourceUv>=float2(0,0))&&all(sourceUv<=float2(1,1));
+}
+
+// V101 "laser census": for each current ray, ask whether the real current raster owns
+// finite opaque depth, and whether the corresponding historical ray (rotation-only,
+// i.e. infinity mapping) also owns finite depth.  This operates on the actual HDRP camera
+// depth rather than Physics.Raycast, so it measures exactly the surface class AER sees.
+// x=current no-depth fraction
+// y=history no-depth at unchanged UV fraction
+// z=history no-depth at rotation-mapped source ray fraction
+// w=current-no-depth AND rotation-mapped-history-no-depth overlap fraction
+[numthreads(1,1,1)]
+void SkyRayClassFieldV101(uint3 id : SV_DispatchThreadID)
+{
+    uint cols=(uint)_TileGrid.x, rows=(uint)_TileGrid.y;
+    if(id.x>=cols||id.y>=rows) return;
+    float2 tile0=float2(id.xy)*_TileGrid.zw;
+    float2 tile1=float2(id.xy+1u)*_TileGrid.zw;
+    int n=0,currentNo=0,histSameNo=0,histRotNo=0,bothRotNo=0;
+    const int S=8;
+    for(int sy=0;sy<S;sy++) for(int sx=0;sx<S;sx++)
+    {
+        float2 uv=lerp(tile0,tile1,(float2(sx,sy)+0.5)/S);
+        uint2 tp=PixelFromUv(uv,_TruthDepthSize);
+        float tr=_TruthDepth.Load(int3((int)tp.x,(int)tp.y,0));
+        bool cNo=tr<=1.0e-8;
+
+        uint2 hpSame=PixelFromUv(uv,_HistoryDepthSize);
+        float hrSame=_HistoryDepth.Load(int3((int)hpSame.x,(int)hpSame.y,0));
+        bool hSameNo=hrSame<=1.0e-8;
+
+        float2 huv;
+        bool mapOk=RotationMappedSourceUvV101(uv,huv);
+        bool hRotNo=false;
+        if(mapOk)
+        {
+            uint2 hpRot=PixelFromUv(huv,_HistoryDepthSize);
+            float hrRot=_HistoryDepth.Load(int3((int)hpRot.x,(int)hpRot.y,0));
+            hRotNo=hrRot<=1.0e-8;
+        }
+
+        currentNo+=cNo?1:0;
+        histSameNo+=hSameNo?1:0;
+        histRotNo+=(mapOk&&hRotNo)?1:0;
+        bothRotNo+=(cNo&&mapOk&&hRotNo)?1:0;
+        n++;
+    }
+    float inv=n>0?1.0/n:0.0;
+    _Atlas[int2((int)id.x,_OutBand*(int)rows+(int)id.y)] =
+        float4(currentNo*inv,histSameNo*inv,histRotNo*inv,bothRotNo*inv);
+}
+
+
+// -----------------------------------------------------------------------------
+// V102: visibility / occlusion classification.
+//
+// The user's 50 m tarp test moved the wobble from the skyline to one foreground
+// rock/tree "cutout" slice.  That is exactly what a single-layer temporal warp does
+// when alpha-card silhouettes and disocclusions change which depth layer owns a ray.
+// These classes compare CURRENT truth depth with the historical depth that should have
+// occupied the same world-space ray/point.  They deliberately do NOT identify semantic
+// materials; they measure the visibility transitions that alpha-tested foliage creates.
+// -----------------------------------------------------------------------------
+int OcclusionClassAtPixelV102(int2 p)
+{
+    float2 uv=(float2(p)+0.5)*_PresentationSize.zw;
+    uint2 tp=PixelFromUv(uv,_TruthDepthSize);
+    float tr=_TruthDepth.Load(int3((int)tp.x,(int)tp.y,0));
+    bool currentNo=tr<=1.0e-8;
+
+    if(currentNo)
+    {
+        float2 huv;
+        if(!RotationMappedSourceUvV101(uv,huv)) return -1;
+        uint2 hp=PixelFromUv(huv,_HistoryDepthSize);
+        float hr=_HistoryDepth.Load(int3((int)hp.x,(int)hp.y,0));
+        return hr<=1.0e-8 ? 0 : 1;
+    }
+
+    // Current finite world point -> historical camera.  If the historical ray owns a
+    // different depth, visibility changed between the stale source and current truth.
+    float2 currentNdc=float2(uv.x*2.0-1.0,1.0-uv.y*2.0);
+    float4 currentViewH=mul(_CurrentInvGpuProjection,float4(currentNdc,tr,1.0));
+    if(abs(currentViewH.w)<=1.0e-8) return -1;
+    float3 currentView=currentViewH.xyz/currentViewH.w;
+    float4 world=mul(_CurrentCameraToWorld,float4(currentView,1.0));
+    float4 histView=mul(_PreviousWorldToCamera,world);
+    float4 histClip=mul(_PreviousGpuProjection,histView);
+    if(!(histClip.w>1.0e-6)) return -1;
+    float2 histNdc=histClip.xy/histClip.w;
+    float2 histUv=float2(histNdc.x*0.5+0.5,0.5-histNdc.y*0.5);
+    if(any(histUv<float2(0,0))||any(histUv>float2(1,1))) return -1;
+
+    uint2 hp=PixelFromUv(histUv,_HistoryDepthSize);
+    float hr=_HistoryDepth.Load(int3((int)hp.x,(int)hp.y,0));
+    if(hr<=1.0e-8) return 2;
+
+    float histDepth=LinearEyeDepthFromRaw(hr);
+    float expectedDepth=histClip.w;
+    if(!(histDepth>0.0)||!(expectedDepth>0.0)||histDepth>1.0e7||expectedDepth>1.0e7) return -1;
+
+    float tolerance=max(0.25,0.05*min(histDepth,expectedDepth));
+    float delta=histDepth-expectedDepth;
+    if(abs(delta)<=tolerance) return 3;
+    // Historical surface was CLOSER than the current truth point: the current point was
+    // hidden before and has now been revealed -> disocclusion / newly exposed background.
+    if(delta<0.0) return 4;
+    // Historical ray was farther than the current point: a nearer current silhouette/occluder
+    // has appeared on this ray.
+    return 5;
+}
+
+[numthreads(1,1,1)]
+void OcclusionClassStatsV102(uint3 id : SV_DispatchThreadID)
+{
+    uint cols=(uint)_TileGrid.x, rows=(uint)_TileGrid.y;
+    if(id.x>=cols||id.y>=rows) return;
+    int2 lo,hi,center; TileBounds(id.xy,lo,hi,center);
+    int sx=max(1,(hi.x-lo.x)/12), sy=max(1,(hi.y-lo.y)/12);
+    float sumAbs=0.0,sumSq=0.0,sumWeighted=0.0,sumWeight=0.0;
+    int nClass=0,nValidClassifiable=0;
+
+    for(int y=lo.y;y<hi.y;y+=sy) for(int x=lo.x;x<hi.x;x+=sx)
+    {
+        int2 p=int2(x,y);
+        int cls=OcclusionClassAtPixelV102(p);
+        if(cls<0) continue;
+        nValidClassifiable++;
+        if(cls!=_OcclusionClassV102) continue;
+
+        float e=abs(Luma(_Candidate.Load(int3(p,0)).rgb)-Luma(_Truth.Load(int3(p,0)).rgb));
+        sumAbs+=e; sumSq+=e*e;
+        int2 px0=int2(max(0,x-1),y), px1=int2(min((int)_PresentationSize.x-1,x+1),y);
+        int2 py0=int2(x,max(0,y-1)), py1=int2(x,min((int)_PresentationSize.y-1,y+1));
+        float gx=abs(Luma(_Truth.Load(int3(px1,0)).rgb)-Luma(_Truth.Load(int3(px0,0)).rgb));
+        float gy=abs(Luma(_Truth.Load(int3(py1,0)).rgb)-Luma(_Truth.Load(int3(py0,0)).rgb));
+        float w=1.0+4.0*saturate(gx+gy);
+        sumWeighted+=e*w; sumWeight+=w; nClass++;
+    }
+
+    float inv=nClass>0?1.0/nClass:0.0;
+    float frac=nValidClassifiable>0?nClass/(float)nValidClassifiable:0.0;
+    _Atlas[int2((int)id.x,_OutBand*(int)rows+(int)id.y)] = float4(
+        sumAbs*inv,
+        sqrt(max(0.0,sumSq*inv)),
+        sumWeight>0.0?sumWeighted/sumWeight:0.0,
+        frac);
+}
+
+// V102 spatial complexity proxy.  Alpha cards are not identified semantically; instead
+// measure the exact raster signature they create: valid/no-depth checkerboarding plus large
+// finite depth jumps between neighboring low-resolution depth samples.
+// x=no-depth fraction
+// y=valid<->no-depth neighbor-boundary fraction
+// z=finite depth-edge fraction (> max(0.25m,5%))
+// w=severe finite layer-jump fraction (> max(2m,20%))
+[numthreads(1,1,1)]
+void OcclusionComplexityFieldV102(uint3 id : SV_DispatchThreadID)
+{
+    uint cols=(uint)_TileGrid.x, rows=(uint)_TileGrid.y;
+    if(id.x>=cols||id.y>=rows) return;
+    float2 tile0=float2(id.xy)*_TileGrid.zw;
+    float2 tile1=float2(id.xy+1u)*_TileGrid.zw;
+    int samples=0,noDepth=0,pairs=0,validityEdges=0,finitePairs=0,depthEdges=0,severeEdges=0;
+    const int S=8;
+    for(int sy=0;sy<S;sy++) for(int sx=0;sx<S;sx++)
+    {
+        float2 uv=lerp(tile0,tile1,(float2(sx,sy)+0.5)/S);
+        uint2 p=PixelFromUv(uv,_TruthDepthSize);
+        uint2 pr=uint2(min(p.x+1u,(uint)_TruthDepthSize.x-1u),p.y);
+        uint2 pd=uint2(p.x,min(p.y+1u,(uint)_TruthDepthSize.y-1u));
+        float r0=_TruthDepth.Load(int3((int)p.x,(int)p.y,0));
+        float rr=_TruthDepth.Load(int3((int)pr.x,(int)pr.y,0));
+        float rd=_TruthDepth.Load(int3((int)pd.x,(int)pd.y,0));
+        bool v0=r0>1.0e-8;
+        noDepth+=v0?0:1; samples++;
+
+        // Right neighbor.
+        bool vr=rr>1.0e-8; pairs++;
+        if(v0!=vr) validityEdges++;
+        else if(v0)
+        {
+            float d0=LinearEyeDepthFromRaw(r0), d1=LinearEyeDepthFromRaw(rr);
+            if(d0>0.0&&d1>0.0&&d0<1.0e7&&d1<1.0e7)
+            {
+                finitePairs++;
+                float delta=abs(d0-d1), mn=min(d0,d1);
+                if(delta>max(0.25,0.05*mn)) depthEdges++;
+                if(delta>max(2.0,0.20*mn)) severeEdges++;
+            }
+        }
+
+        // Down neighbor.
+        bool vd=rd>1.0e-8; pairs++;
+        if(v0!=vd) validityEdges++;
+        else if(v0)
+        {
+            float d0=LinearEyeDepthFromRaw(r0), d1=LinearEyeDepthFromRaw(rd);
+            if(d0>0.0&&d1>0.0&&d0<1.0e7&&d1<1.0e7)
+            {
+                finitePairs++;
+                float delta=abs(d0-d1), mn=min(d0,d1);
+                if(delta>max(0.25,0.05*mn)) depthEdges++;
+                if(delta>max(2.0,0.20*mn)) severeEdges++;
+            }
+        }
+    }
+    _Atlas[int2((int)id.x,_OutBand*(int)rows+(int)id.y)] = float4(
+        samples>0?noDepth/(float)samples:0.0,
+        pairs>0?validityEdges/(float)pairs:0.0,
+        finitePairs>0?depthEdges/(float)finitePairs:0.0,
+        finitePairs>0?severeEdges/(float)finitePairs:0.0);
+}
+
+// V102 direct proxy for post-DLSS color / half-linear depth association risk.
+// Four high-resolution color samples are taken INSIDE one current low-res depth cell.
+// If those colors vary sharply while the depth lattice also changes layer/validity nearby,
+// a single nearest low-res depth value cannot faithfully describe every post-DLSS color pixel.
+// x=mean within-depth-cell luma range
+// y=fraction cells with luma range > .08
+// z=fraction cells with local depth validity/layer discontinuity
+// w=fraction cells with BOTH high color range and depth discontinuity
+[numthreads(1,1,1)]
+void DepthColorRiskFieldV102(uint3 id : SV_DispatchThreadID)
+{
+    uint cols=(uint)_TileGrid.x, rows=(uint)_TileGrid.y;
+    if(id.x>=cols||id.y>=rows) return;
+    float2 tile0=float2(id.xy)*_TileGrid.zw;
+    float2 tile1=float2(id.xy+1u)*_TileGrid.zw;
+    float sumRange=0.0; int n=0,highColor=0,depthMixed=0,joint=0;
+    const int S=8;
+    for(int sy=0;sy<S;sy++) for(int sx=0;sx<S;sx++)
+    {
+        float2 uv=lerp(tile0,tile1,(float2(sx,sy)+0.5)/S);
+        uint2 dp=PixelFromUv(uv,_TruthDepthSize);
+        float2 duv=(float2(dp)+0.5)*_TruthDepthSize.zw;
+        float2 off=0.24*_TruthDepthSize.zw;
+        float2 cuv0=saturate(duv+float2(-off.x,-off.y));
+        float2 cuv1=saturate(duv+float2( off.x,-off.y));
+        float2 cuv2=saturate(duv+float2(-off.x, off.y));
+        float2 cuv3=saturate(duv+float2( off.x, off.y));
+        uint2 cp0=PixelFromUv(cuv0,_PresentationSize);
+        uint2 cp1=PixelFromUv(cuv1,_PresentationSize);
+        uint2 cp2=PixelFromUv(cuv2,_PresentationSize);
+        uint2 cp3=PixelFromUv(cuv3,_PresentationSize);
+        float l0=Luma(_Truth.Load(int3((int)cp0.x,(int)cp0.y,0)).rgb);
+        float l1=Luma(_Truth.Load(int3((int)cp1.x,(int)cp1.y,0)).rgb);
+        float l2=Luma(_Truth.Load(int3((int)cp2.x,(int)cp2.y,0)).rgb);
+        float l3=Luma(_Truth.Load(int3((int)cp3.x,(int)cp3.y,0)).rgb);
+        float mn=min(min(l0,l1),min(l2,l3));
+        float mx=max(max(l0,l1),max(l2,l3));
+        float range=mx-mn; bool hc=range>0.08;
+
+        float r0=_TruthDepth.Load(int3((int)dp.x,(int)dp.y,0));
+        uint2 pr=uint2(min(dp.x+1u,(uint)_TruthDepthSize.x-1u),dp.y);
+        uint2 pd=uint2(dp.x,min(dp.y+1u,(uint)_TruthDepthSize.y-1u));
+        float rr=_TruthDepth.Load(int3((int)pr.x,(int)pr.y,0));
+        float rd=_TruthDepth.Load(int3((int)pd.x,(int)pd.y,0));
+        bool v0=r0>1.0e-8, vr=rr>1.0e-8, vd=rd>1.0e-8;
+        bool dm=(v0!=vr)||(v0!=vd);
+        if(v0&&vr)
+        {
+            float d0=LinearEyeDepthFromRaw(r0), d1=LinearEyeDepthFromRaw(rr);
+            if(d0>0.0&&d1>0.0)
+                dm = dm || (abs(d0-d1)>max(0.25,0.05*min(d0,d1)));
+        }
+        if(v0&&vd)
+        {
+            float d0=LinearEyeDepthFromRaw(r0), d1=LinearEyeDepthFromRaw(rd);
+            if(d0>0.0&&d1>0.0)
+                dm = dm || (abs(d0-d1)>max(0.25,0.05*min(d0,d1)));
+        }
+        sumRange+=range; n++; highColor+=hc?1:0; depthMixed+=dm?1:0; joint+=(hc&&dm)?1:0;
+    }
+    float inv=n>0?1.0/n:0.0;
+    _Atlas[int2((int)id.x,_OutBand*(int)rows+(int)id.y)] = float4(
+        sumRange*inv, highColor*inv, depthMixed*inv, joint*inv);
+}
+

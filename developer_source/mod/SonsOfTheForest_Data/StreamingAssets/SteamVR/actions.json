@@ -1,0 +1,134 @@
+{
+	"actions": [
+		{
+			"name": "/actions/default/in/ButtonRight_A_Touch",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/ButtonRight_A_Press",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/ButtonRight_B_Touch",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/ButtonRight_B_Press",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/ButtonLeft_X_Touch",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/ButtonLeft_X_Press",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/ButtonLeft_Y_Touch",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/ButtonLeft_Y_Press",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/ThumbstickLeft",
+			"type": "vector2"
+		},
+		{
+			"name": "/actions/default/in/ThumbstickLeft_Touch",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/ThumbstickLeft_Press",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/ThumbstickRight",
+			"type": "vector2"
+		},
+		{
+			"name": "/actions/default/in/ThumbstickRight_Touch",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/ThumbstickRight_Press",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/TriggerLeft_Touch",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/TriggerLeft_Press",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/TriggerLeft_Value",
+			"type": "vector1"
+		},
+		{
+			"name": "/actions/default/in/TriggerRight_Touch",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/TriggerRight_Press",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/TriggerRight_Value",
+			"type": "vector1"
+		},
+		{
+			"name": "/actions/default/in/GripLeft_Press",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/GripLeft_Value",
+			"type": "vector1"
+		},
+		{
+			"name": "/actions/default/in/GripRight_Press",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/GripRight_Value",
+			"type": "vector1"
+		},
+		{
+			"name": "/actions/default/in/ButtonRight_System_Press",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/ButtonLeft_Menu_Press",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/default/in/PoseRight",
+			"type": "pose"
+		},
+		{
+			"name": "/actions/default/in/PoseLeft",
+			"type": "pose"
+		},
+		{
+			"name": "/actions/default/out/Haptic",
+			"type": "vibration"
+		}
+	],
+	"default_bindings": [
+		{
+			"controller_type": "oculus_touch",
+			"binding_url": "bindings_oculus_touch.json"
+		},
+		{
+			"controller_type": "rift",
+			"binding_url": "bindings_rift.json"
+		}
+	],
+	"localization": [
+	{
+      "language_tag": "en_US"
+    }]
+}

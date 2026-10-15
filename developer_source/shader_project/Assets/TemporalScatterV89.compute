@@ -1,0 +1,311 @@
+#pragma kernel ClearScatter
+#pragma kernel SplatDepth
+#pragma kernel ResolveSource
+#pragma target 5.0
+
+// V90 keeps V88's full-resolution triangle-free depth scatter and adds an optional
+// NVIDIA Optical Flow residual.  NVOFA is run CURRENT_REAL -> PREVIOUS_REAL, so its
+// S10.5 vector is anchored at the CURRENT historical source pixel and points backward
+// in time.  Camera motion is already handled exactly by the depth/matrix reprojection.
+// We therefore reconstruct the camera-only CURRENT->PREVIOUS displacement, subtract it
+// from NVOFA's total apparent flow, negate the residual, and extrapolate that scene
+// motion by the measured prediction-horizon / flow-interval ratio.
+//
+// V89's HDRP object-motion path remains compiled as a dormant fallback/research knob,
+// but V90's A/B enables ONLY NVOFA so the experiment is interpretable.
+
+Texture2D<float> _SourceDepth;
+Texture2D<float2> _SourceMotion;
+Texture2D<int2> _SourceOpticalFlowV90;
+RWTexture2D<uint> _DepthKey;
+RWTexture2D<uint> _SourceIndex;
+
+float4 _ZBufferParams;
+float4 _SourceSize; // V98 source-dispatch/color grid: width, height, 1/width, 1/height
+float4 _DepthSizeV98; // paired camera-local depth grid: width, height, 1/width, 1/height
+float4 _TargetSize; // width, height, 1/width, 1/height
+float _MaxWarpMeters;
+float _UseInvalidDepthRotationScatterV101; // V101: no-depth/sky pixels rotate as infinity before fill
+
+float4x4 _SourceInvGpuProjection;
+float4x4 _SourceCameraToWorld;
+float4x4 _TargetWorldToCamera;
+float4x4 _TargetGpuProjection;
+
+// Previous REAL camera matrices for THIS SAME physical eye. These come from our own
+// previous eye latch rather than HDRP's camera-relative internal matrices, keeping all
+// world-space math here in one absolute-coordinate convention.
+float4x4 _PrevSourceWorldToCamera;
+float4x4 _PrevSourceGpuProjection;
+
+float _UseObjectMotion;
+float _ObjectMotionScale;
+float _MaxObjectMotionPixels;
+
+float _UseOpticalFlowV90;
+float _OpticalFlowTimeScaleV90;
+float _MaxOpticalFlowResidualPixelsV90;
+float4 _OpticalFlowSizeV91; // width, height, 1/width, 1/height; may be < depth/color
+
+static const uint INVALID_U32 = 0xFFFFFFFFu;
+
+float LinearEyeDepthFromRaw(float rawDepth)
+{
+    return rcp(_ZBufferParams.z * rawDepth + _ZBufferParams.w);
+}
+
+bool IsFiniteMotion(float2 v)
+{
+    // NaN fails v==v. The generous absolute bound also catches infinities/garbage
+    // without depending on a backend-specific isfinite() implementation.
+    return all(v == v) && abs(v.x) < 1.0e3 && abs(v.y) < 1.0e3;
+}
+
+float2 ClampObjectMotion(float2 objectMotion)
+{
+    if (!IsFiniteMotion(objectMotion))
+        return float2(0.0, 0.0);
+
+    float2 pixels = objectMotion * _TargetSize.xy;
+    float magPx = length(pixels);
+    float maxPx = max(0.0, _MaxObjectMotionPixels);
+
+    if (maxPx > 0.0 && magPx > maxPx && magPx > 1.0e-6)
+        objectMotion *= maxPx / magPx;
+
+    return objectMotion;
+}
+
+bool ProjectSourcePixel(uint2 sourcePixel, out uint2 targetPixel, out uint depthKey)
+{
+    targetPixel = uint2(0, 0);
+    depthKey = INVALID_U32;
+
+    uint sourceWidth = (uint)_SourceSize.x;
+    uint sourceHeight = (uint)_SourceSize.y;
+    if (sourcePixel.x >= sourceWidth || sourcePixel.y >= sourceHeight)
+        return false;
+
+    // V98: sourcePixel may be either the old low-resolution DEPTH lattice or the
+    // full post-DLSS PRESENTATION/color lattice.  Always define the source ray from
+    // the source/color pixel center, then fetch the nearest paired low-res depth
+    // sample by normalized UV.  This does NOT invent extra depth detail; it merely
+    // gives every historical color pixel its own ray instead of letting HoleFill
+    // fabricate ~75% of the final synthetic pixels when DLSS is 2x linear.
+    float2 sourceUv = (float2(sourcePixel) + 0.5) * _SourceSize.zw;
+    uint2 depthPixel = uint2(floor(sourceUv * _DepthSizeV98.xy));
+    depthPixel.x = min(depthPixel.x, (uint)_DepthSizeV98.x - 1u);
+    depthPixel.y = min(depthPixel.y, (uint)_DepthSizeV98.y - 1u);
+
+    float rawDepth = _SourceDepth.Load(int3((int)depthPixel.x, (int)depthPixel.y, 0));
+
+    // V101: camera-local opaque depth has no sample for HDRP sky/background (and for some
+    // alpha/LOD surfaces). Historically these pixels simply vanished from the scatter, then
+    // HoleFill/final stale-UV fallback had to invent the target image.  For the diagnostic B
+    // phase, treat ONLY raw no-depth pixels as infinitely distant background: rotate the
+    // source ray into the current target camera with w=0, deliberately removing translation.
+    // Give it an almost-maximal depth key so any real finite geometry atomically wins in front.
+    if (rawDepth <= 1.0e-8)
+    {
+        if (_UseInvalidDepthRotationScatterV101 <= 0.5)
+            return false;
+
+        float2 sourceNdcSky = float2(sourceUv.x * 2.0 - 1.0, 1.0 - sourceUv.y * 2.0);
+        float4 sourceViewHSky = mul(_SourceInvGpuProjection, float4(sourceNdcSky, 0.5, 1.0));
+        if (abs(sourceViewHSky.w) <= 1.0e-8)
+            return false;
+
+        float3 sourceViewDirSky = sourceViewHSky.xyz / sourceViewHSky.w;
+        float3 worldDirSky = mul(_SourceCameraToWorld, float4(sourceViewDirSky, 0.0)).xyz;
+        float3 targetViewDirSky = mul(_TargetWorldToCamera, float4(worldDirSky, 0.0)).xyz;
+        float4 targetClipSky = mul(_TargetGpuProjection, float4(targetViewDirSky, 1.0));
+        if (!(targetClipSky.w > 1.0e-6))
+            return false;
+
+        float2 targetNdcSky = targetClipSky.xy / targetClipSky.w;
+        float2 targetUvSky = float2(targetNdcSky.x * 0.5 + 0.5, 0.5 - targetNdcSky.y * 0.5);
+        if (targetUvSky.x < 0.0 || targetUvSky.x >= 1.0 ||
+            targetUvSky.y < 0.0 || targetUvSky.y >= 1.0)
+            return false;
+
+        uint targetWidthSky = (uint)_TargetSize.x;
+        uint targetHeightSky = (uint)_TargetSize.y;
+        uint2 pSky = uint2(floor(targetUvSky * _TargetSize.xy));
+        pSky.x = min(pSky.x, targetWidthSky - 1u);
+        pSky.y = min(pSky.y, targetHeightSky - 1u);
+
+        targetPixel = pSky;
+        depthKey = 0xFFFFFFFEu; // background: any finite asuint(depth) wins InterlockedMin
+        return true;
+    }
+
+    float eyeDepth = LinearEyeDepthFromRaw(rawDepth);
+    if (!(eyeDepth > 0.0) || eyeDepth > _MaxWarpMeters)
+        return false;
+    float2 sourceNdc = float2(sourceUv.x * 2.0 - 1.0, 1.0 - sourceUv.y * 2.0);
+    float4 normalizedSourceClip = float4(sourceNdc, rawDepth, 1.0);
+    float4 sourceViewH = mul(_SourceInvGpuProjection, normalizedSourceClip);
+    if (abs(sourceViewH.w) <= 1.0e-8)
+        return false;
+
+    float3 sourceView = sourceViewH.xyz / sourceViewH.w;
+    float4 world = mul(_SourceCameraToWorld, float4(sourceView, 1.0));
+
+    // Existing V88 camera/depth reprojection: historical same-eye world point ->
+    // desired current same-eye camera. This already accounts for ALL head/camera motion.
+    float4 targetView = mul(_TargetWorldToCamera, world);
+    float4 targetClip = mul(_TargetGpuProjection, targetView);
+    if (!(targetClip.w > 1.0e-6))
+        return false;
+
+    float2 targetNdc = targetClip.xy / targetClip.w;
+    float2 targetUv = float2(targetNdc.x * 0.5 + 0.5, 0.5 - targetNdc.y * 0.5);
+
+    if (_UseObjectMotion > 0.5)
+    {
+        // Reconstruct the camera-only component of HDRP's historical velocity. For a
+        // stationary world point, this is where the CURRENT point would have appeared in
+        // the previous REAL render of this same physical eye.
+        float4 prevView = mul(_PrevSourceWorldToCamera, world);
+        float4 prevClip = mul(_PrevSourceGpuProjection, prevView);
+
+        if (prevClip.w > 1.0e-6)
+        {
+            float2 prevNdc = prevClip.xy / prevClip.w;
+            float2 prevUv = float2(prevNdc.x * 0.5 + 0.5, 0.5 - prevNdc.y * 0.5);
+
+            // HDRP's motion vector convention is forward screen-UV displacement:
+            // current - previous. Because sourceUv/prevUv here are already top-left UVs,
+            // the D3D Y convention is naturally identical to our captured texture.
+            float2 cameraMotion = sourceUv - prevUv;
+            float2 totalMotion = _SourceMotion.Load(
+                int3((int)depthPixel.x, (int)depthPixel.y, 0));
+
+            // HDRP reserves x > 1 for its FORCE_NO_MOTION / invalid-motion marker.
+            // Decode that marker explicitly. Treating the raw sentinel (typically x=2)
+            // as velocity and merely clamping it would manufacture a large fake shove.
+            if (totalMotion.x <= 1.0 && IsFiniteMotion(totalMotion))
+            {
+                // Remove camera motion so it is NOT applied twice. What remains is the
+                // per-pixel object/animation contribution (foliage, hands, animals, etc.).
+                float2 objectMotion = ClampObjectMotion(totalMotion - cameraMotion);
+
+                // First-order constant-velocity extrapolation one Unity tick forward.
+                // Under this AER architecture the stale presentation is one global Unity
+                // frame old. The object-motion history is therefore applied at scale 1.0
+                // initially; the factor is deliberately a public V89 knob if runtime
+                // evidence shows this game's previous-object state spans a different interval.
+                targetUv += objectMotion * _ObjectMotionScale;
+            }
+        }
+    }
+
+    if (_UseOpticalFlowV90 > 0.5)
+    {
+        // V91 may run NVOFA at a lower resolution than both historical depth and final
+        // DLSS color. Sample the motion field by NORMALIZED source UV. NVOFA vectors are
+        // S10.5 pixels in the FLOW image's own pixel units, not depth/output pixel units.
+        uint2 flowPixel = uint2(floor(sourceUv * _OpticalFlowSizeV91.xy));
+        flowPixel.x = min(flowPixel.x, (uint)_OpticalFlowSizeV91.x - 1u);
+        flowPixel.y = min(flowPixel.y, (uint)_OpticalFlowSizeV91.y - 1u);
+        int2 rawFlow = _SourceOpticalFlowV90.Load(
+            int3((int)flowPixel.x, (int)flowPixel.y, 0));
+        float2 totalBackwardFlowPx = float2(rawFlow) * (1.0 / 32.0);
+
+        float4 prevViewOfCurrent = mul(_PrevSourceWorldToCamera, world);
+        float4 prevClipOfCurrent = mul(_PrevSourceGpuProjection, prevViewOfCurrent);
+        if (prevClipOfCurrent.w > 1.0e-6)
+        {
+            float2 prevNdc = prevClipOfCurrent.xy / prevClipOfCurrent.w;
+            float2 prevUv = float2(prevNdc.x * 0.5 + 0.5, 0.5 - prevNdc.y * 0.5);
+
+            // Reconstruct camera-only CURRENT->PREVIOUS displacement in the SAME pixel
+            // units as NVOFA's lower-resolution field, then subtract it there.
+            float2 cameraBackwardFlowPx =
+                (prevUv - sourceUv) * _OpticalFlowSizeV91.xy;
+            float2 residualBackwardFlowPx =
+                totalBackwardFlowPx - cameraBackwardFlowPx;
+
+            if (IsFiniteMotion(residualBackwardFlowPx))
+            {
+                // Convert to UV before clamping. The research knob remains expressed in
+                // PRESENTATION pixels, so changing OF resolution cannot secretly double the
+                // allowed world deformation.
+                float2 residualBackwardUv =
+                    residualBackwardFlowPx * _OpticalFlowSizeV91.zw;
+                float2 residualPresentationPx =
+                    residualBackwardUv * _TargetSize.xy;
+                float magPx = length(residualPresentationPx);
+                float maxPx = max(0.0, _MaxOpticalFlowResidualPixelsV90);
+                if (maxPx > 0.0 && magPx > maxPx && magPx > 1.0e-6)
+                    residualBackwardUv *= maxPx / magPx;
+
+                // Constant-velocity first-order extrapolation:
+                // current->next ~= -(current->previous residual) * dtPredict/dtFlow.
+                float scale = max(0.0, _OpticalFlowTimeScaleV90);
+                targetUv += (-residualBackwardUv) * scale;
+            }
+        }
+    }
+
+    if (targetUv.x < 0.0 || targetUv.x >= 1.0 ||
+        targetUv.y < 0.0 || targetUv.y >= 1.0)
+        return false;
+
+    uint targetWidth = (uint)_TargetSize.x;
+    uint targetHeight = (uint)_TargetSize.y;
+    uint2 p = uint2(floor(targetUv * _TargetSize.xy));
+    p.x = min(p.x, targetWidth - 1u);
+    p.y = min(p.y, targetHeight - 1u);
+
+    // The object-motion correction is screen-space only, so use the depth of the current
+    // reprojected world point for visibility arbitration. For the tiny temporal horizon this
+    // is a much safer first experiment than inventing an unavailable 3D velocity/depth delta.
+    float positiveTargetDepth = max(targetClip.w, 1.0e-6);
+    uint key = asuint(positiveTargetDepth);
+    if (key == INVALID_U32)
+        key = INVALID_U32 - 1u;
+
+    targetPixel = p;
+    depthKey = key;
+    return true;
+}
+
+[numthreads(8, 8, 1)]
+void ClearScatter(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)_TargetSize.x || id.y >= (uint)_TargetSize.y)
+        return;
+
+    uint2 p = id.xy;
+    _DepthKey[p] = INVALID_U32;
+    _SourceIndex[p] = INVALID_U32;
+}
+
+[numthreads(8, 8, 1)]
+void SplatDepth(uint3 id : SV_DispatchThreadID)
+{
+    uint2 targetPixel;
+    uint depthKey;
+    if (!ProjectSourcePixel(id.xy, targetPixel, depthKey))
+        return;
+
+    uint previous;
+    InterlockedMin(_DepthKey[targetPixel], depthKey, previous);
+}
+
+[numthreads(8, 8, 1)]
+void ResolveSource(uint3 id : SV_DispatchThreadID)
+{
+    uint2 targetPixel;
+    uint depthKey;
+    if (!ProjectSourcePixel(id.xy, targetPixel, depthKey))
+        return;
+
+    if (_DepthKey[targetPixel] != depthKey)
+        return;
+
+    uint packedSource = ((id.y & 0xFFFFu) << 16) | (id.x & 0xFFFFu);
+    uint previous;
+    InterlockedMin(_SourceIndex[targetPixel], packedSource, previous);
+}

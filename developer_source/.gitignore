@@ -1,0 +1,25 @@
+# Compiler and asset bundle outputs
+**/bin/
+**/obj/
+**/build/
+**/builds/
+OUTPUT/
+shader_project/THINGY_OUT/
+mod/Resources/sonsvr_depththingy
+shader_build.log
+*.pdb
+*.log
+*.bak
+SonsVR_Settings.ini
+SonsVR_Settings.ini.*
+# Unity-generated state
+shader_project/Library/
+shader_project/Temp/
+shader_project/Logs/
+shader_project/UserSettings/
+# IDE files
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo

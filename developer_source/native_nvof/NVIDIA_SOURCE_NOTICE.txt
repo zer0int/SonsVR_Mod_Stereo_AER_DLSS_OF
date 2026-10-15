@@ -1,0 +1,7 @@
+The files under Common/NvOFBase and NvOFInterface are copied from the user-supplied
+NVIDIA Optical Flow SDK 5.0.7 solely to make this experimental build reproducible.
+They retain NVIDIA's original copyright/license headers verbatim.
+
+SonsVR_NvOF_V90.cpp is project-specific bridge code and is not an NVIDIA sample.
+At runtime it dynamically loads nvofapi64.dll from the installed NVIDIA display driver.
+No NVIDIA runtime DLL is redistributed by this kit.

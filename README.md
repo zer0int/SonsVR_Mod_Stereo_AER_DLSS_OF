@@ -1,3 +1,210 @@
+# Sons of the Forest VR Mod (Unofficial) with AER, 2E, DLSS, OF
+
+Original Mod by [iPowerTech/SonsVR_Mod](https://github.com/iPowerTech/SonsVR_Mod)\
+Based on the Fork [Manny79/SonsVR_Mod](https://github.com/Manny79/SonsVR_Mod)
+
+
+## Features in this Fork:
+
+- New mode: AER (Alternate Eye Rendering)\
+💡 BEST PERFORMANCE\
+Get a view for two eyes, only render one eye and reconstruct\
+Uses a compiled Unity shader for mipmaps depth correction
+- Original Stereo Rendering for both eyes (2E) also available\
+💡 BEST QUALITY\
+Bearable performance impact due to DLSS (NVIDIA RTX only)
+- NVIDIA DLSS (default on)\
+Deep Learning Super Sampling for more FPS and higher quality\
+Renders at a lower resolution, then AI upscales the result
+- NVIDIA OF (Optical Flow) (default on)\
+Makes it look like you have more FPS than you actually do
+
+
+## Fixes:
+
+- Eliminated scene rendering DURING loading -> slashed load time in half
+- Fixed HUD render issues / glitches with the Status Ring and Map
+- Fixed thrashing (slowdown) in cooking / crafting tarp menus
+- Fixed backpack quick selection (now uses gaze)
+- Also uses gaze for selection in cooking menu, blueprint / tutorial booklets
+- Fixed issue with glitchy selection in cooking menu
+- Fixed thrashing due to nonexistent volume search after loading / start new game
+- Thus previous stuttering (low FPS) issue with cutscene on new game also fixed
+- Fixed spin-rotate exiting of crafting tarp due to camera reset
+- Removed player visibility from tarp crafting as body just ends up in the way :P
+
+
+## How To Use:
+
+0. Have Sons Of The Forest on Steam + SteamVR installed.
+1. Install [MelonLoader](melonwiki.xyz), select SOTF:
+![Install Melon Loader](howto/install_melonloader.png)
+2. Then copy all the content of `game_files` to `steamapps/common/Sons Of The Forest`:\
+![Where to copy](howto/where_to_copy.png)
+
+- Overlay special VR settings, Xbox: `[menu]+[view]` or Keyboard: `Ctrl+Alt+F12`\
+![Xbox config menu](howto/xbox_config_menu.png)\
+You can alternatively just edit the config manually via\
+`steamapps\common\Sons Of The Forest\Mods\SonsVR_Settings.ini`.
+- The DLSS config is in the game's main menu: OPTIONS -> GRAPHICS.
+![Xbox config menu](howto/extra_menu.png)
+
+-----
+
+## Developer Extras:
+
+The `/developer_source` contains the source code. See [CHANGELOG](developer_source/CHANGELOG.md) and [README](developer_source/README.md).\
+
+In `/developer_extras` you'll find:
+- SonsVR_Unity_Reverse_Dependency_Hunter_Kit: Builds searchable sqlite DB for game assets -> hunt dependency trees, class names, ...
+- SonsVR_Unity_Dependency_Evidence_Slicer_Kit, SonsVR_Stripped_MonoBehaviour_Resolver_Kit -> find and resolve stuff in DB
+- Depth mipmap shader and HUD shader Unity project, needs Unity 2022.2.16f1 to build
+- Partially vibecoded with AI. I have experience in Python, AI, and Blender - but not with Game Engines.
+- Code by GPT-5.6 Sol. Changes diligently documented in code comments by the AI. If "the user" is mentioned, that's my direct contribution / instruction. :)
+
+## Known Limitations / Bugs:
+
+- Legacy VR controller support current DOES NOT WORK with this fork; needs code overhaul. I nevertheless display the option to swap `[XBOX <-> VR]` in the overlay for future use.
+- HUD Status Ring / Map / Text messages still behind foreground objects held by the player
+- Some cutscenes may show occasional double text in two layers; some action prompts (interact with object) may be absent, although the interaction still works.
+- Transfer from cinematic cutscene to player control may sometimes still have a weird perspective; this is due to free look with the HMD. To fix, rotate yourself via thumbstick.
+- DLSS 50% minimum, 33% Ultra Performance not available -> Ultra Performance and Performance both result in the same minimum 50% input scale; see [DLSS API docs](https://raw.githubusercontent.com/NVIDIA/DLSS/main/doc/DLSS_Programming_Guide_Release.pdf)
+
+![VRginia](howto/virginia_github.png)
+
+-------------
+ORIGINAL AUTHOR'S README BELOW
+-------------
+
+### README: Fork by [Manny79/SonsVR_Mod](https://github.com/Manny79/SonsVR_Mod)
+
+
+# Sons of the Forest VR Mod (Unofficial) — Community Fork
+
+> **Bring full VR support to *Sons of the Forest* using SteamVR and OpenVR — without official VR mode.**
+
+This is a fork of [iPowerTech/SonsVR_Mod](https://github.com/iPowerTech/SonsVR_Mod), containing a large number of bug fixes and new features layered on top of the original. See **[CHANGELOG.md](CHANGELOG.md)** for the full list of what's changed. All credit for the original mod and its architecture goes to the upstream author (see Credits below) — this fork exists to share additional fixes and improvements built on top of that foundation, under the same license.
+
+This mod injects a complete VR pipeline into *Sons of the Forest* (PC version), enabling immersive gameplay using **Valve Index**, **HTC Vive**, **Meta Quest (via Air Link/Virtual Desktop)**, and other **OpenVR-compatible headsets**.
+
+Built with **MelonLoader**, **Il2CppInterop**, and **SteamVR Plugin**, it renders the game in stereo VR while supporting both a native Xbox/gamepad controller and the original VR-motion-controller gesture input.
+
+---
+
+## 🆕 What's Different in This Fork
+
+- **Gamepad-first input**: this fork adds a `GamepadOnlyMode` (on by default) that lets a physical Xbox controller drive the game directly, using the game's own native controller support, instead of the original's VR-gesture-to-keyboard emulation. The original gesture/keyboard-emulation system (documented below) is still present and can be restored by setting `GamepadOnlyMode = false` in `VRPlayer.cs`.
+- A large number of stability, camera-tracking, HUD, and vehicle fixes — see **[CHANGELOG.md](CHANGELOG.md)** for the complete list.
+
+---
+
+## ✅ Current Features
+
+- **Full Stereo Rendering**  
+  Custom left/right eye cameras with OpenVR projection matrices, dynamic resolution scaling, and native texture submission to the compositor.
+
+- **Gamepad-first controls** *(default, and the primary supported way to play this fork)*  
+  Plug in a physical Xbox controller and it drives the game directly through Sons Of The Forest's own native controller support — including smooth turning with the right stick, replacing the original mod's snap-turning.
+
+- **Legacy VR-gesture mode** *(inactive by default; the underlying code is still present in this fork and can be restored by setting `GamepadOnlyMode = false` in `VRPlayer.cs`, though it hasn't been re-tested alongside this fork's other changes)*
+    - Locomotion via left thumbstick, snap turning via right thumbstick, and gesture-based actions (jump, melee, interact, inventory, crouch) mapped to synthetic keyboard/mouse input — see the [original mod's documentation](https://github.com/iPowerTech/SonsVR_Mod) for the full gesture/key mapping.
+
+- **Automatic Camera & Player Detection**  
+  Dynamically finds the game’s `MainCameraFP` and `LocalPlayer` across scenes (main world, caves, interiors).
+
+- **Compatibility**  
+  Works with existing Sons of the Forest mods and saves. No modification of game files required.
+
+---
+
+## ⚙️ Requirements
+
+- **Game**: *Sons of the Forest* (Steam, PC version)
+- **VR Headset**: Any **OpenVR-compatible** device (Index, Vive, Quest via SteamVR, etc.)
+- **Mod Loader**: [MelonLoader](https://melonwiki.xyz/) (latest stable release recommended)
+- **Runtime**: .NET 6+ 
+
+---
+
+## 📥 Installation
+
+1. Install **MelonLoader** into your *Sons of the Forest* folder.
+2. Copy all files and folders into the root of the game folder.
+3. Launch the game in **VR mode** (via SteamVR).
+
+> 💡 **Note**: The game must be launched **through SteamVR**. Do not use desktop mode.
+
+---
+
+## 🎛️ Recommended Game Settings
+
+For the best experience with this mod, apply these settings in the game's own options menu before playing:
+
+**Headset Connection**
+- **Use Virtual Desktop over Quest Link/Air Link** if your headset supports it — noticeably better visual quality for this mod's VR rendering pipeline.
+
+**Display**
+- **Fullscreen** selected (rather than windowed)
+- **VSync**: Disabled
+
+**Graphics**
+- **Dynamic Resolution**: DLSS
+- **Motion Blur**: Off
+- **Chromatic Aberration**: Off
+- **Film Grain**: Off
+
+**Gameplay**
+- **FOV**: 95 (max) — important for seeing UI items clearly and for cursor precision
+
+---
+
+## ⚠️ Known Limitations
+
+- **Some menus still not in VR space**: most menus (title screen, Options, multiplayer lobby, pause) are now rendered properly in world-space VR in this fork, but modal popup windows (the quit/save confirmation dialog, and the crafting-mat "add items to the mat" tutorial) still only appear on the flat desktop mirror — see [CHANGELOG.md](CHANGELOG.md) for details.
+- **Cutscenes & Vehicles**: Golf cart and hang glider camera tracking/free-look significantly improved in this fork — see [CHANGELOG.md](CHANGELOG.md). Cutscenes specifically may still break immersion or camera tracking (not addressed in this fork).
+- **Performance**: Render resolution is high by default; may require supersampling adjustment in SteamVR.
+
+---
+
+## 🙌 Credits
+
+- **Original Mod Author**: Antonio Mauriello (`Anthony`) — [iPowerTech/SonsVR_Mod](https://github.com/iPowerTech/SonsVR_Mod)
+- **Based on**: MelonLoader, Il2CppInterop, SteamVR Unity Plugin
+- **Special Thanks**: MelonLoader & Sons of the Forest modding communities
+- **This Fork**: additional fixes and features — see [CHANGELOG.md](CHANGELOG.md)
+
+---
+
+## 📜 License
+
+Copyright (C) 2025 Antonio Mauriello
+
+This program is free software: you can redistribute it and/or modify  
+it under the terms of the **GNU General Public License as published by**  
+the Free Software Foundation, **version 2** of the License.
+
+This program is distributed in the hope that it will be useful,  
+but WITHOUT ANY WARRANTY; without even the implied warranty of  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the  
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License  
+along with this program.  If not, see <https://www.gnu.org/licenses/gpl-2.0.html>.
+
+*Sons of the Forest* is a trademark of Endnight Games Ltd.  
+This mod is **not affiliated** with Endnight Games, Steam, or Valve Corporation.
+---
+
+> 🌐 **Enjoy VR survival horror — now in full immersion!**  
+> *"The forest remembers..." — now in stereo 3D.*
+
+
+-------------
+
+### README: Original Mod by [iPowerTech/SonsVR_Mod](https://github.com/iPowerTech/SonsVR_Mod)
+
+
+
 # Sons of the Forest VR Mod (Unofficial)
 
 > Full VR for *Sons of the Forest* on PC, through SteamVR. The game has no VR mode; this adds one.
