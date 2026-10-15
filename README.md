@@ -1,7 +1,8 @@
-# Sons of the Forest VR Mod (Unofficial) with AER, 2E, DLSS, OF
+# Sons of the Forest VR Mod (Unofficial)
+with AER, 2E, DLSS, OF + many performance improvements
 
 Original Mod by [iPowerTech/SonsVR_Mod](https://github.com/iPowerTech/SonsVR_Mod)\
-Based on the Fork [Manny79/SonsVR_Mod](https://github.com/Manny79/SonsVR_Mod)
+Directly based on the Fork [Manny79/SonsVR_Mod](https://github.com/Manny79/SonsVR_Mod)
 
 
 ## Features in this Fork:
@@ -27,11 +28,11 @@ Makes it look like you have more FPS than you actually do
 - Fixed thrashing (slowdown) in cooking / crafting tarp menus
 - Fixed backpack quick selection (now uses gaze)
 - Also uses gaze for selection in cooking menu, blueprint / tutorial booklets
-- Fixed issue with glitchy selection in cooking menu
 - Fixed thrashing due to nonexistent volume search after loading / start new game
 - Thus previous stuttering (low FPS) issue with cutscene on new game also fixed
 - Fixed spin-rotate exiting of crafting tarp due to camera reset
 - Removed player visibility from tarp crafting as body just ends up in the way :P
+- ... and many more
 
 
 ## How To Use:
@@ -53,7 +54,7 @@ You can alternatively just edit the config manually via\
 
 ## Developer Extras:
 
-The `/developer_source` contains the source code. See [CHANGELOG](developer_source/CHANGELOG.md) and [README](developer_source/README.md).\
+The `/developer_source` contains the source code. See [CHANGELOG](developer_source/CHANGELOG.md) and [README](developer_source/README.md).
 
 In `/developer_extras` you'll find:
 - SonsVR_Unity_Reverse_Dependency_Hunter_Kit: Builds searchable sqlite DB for game assets -> hunt dependency trees, class names, ...
@@ -64,9 +65,9 @@ In `/developer_extras` you'll find:
 
 ## Known Limitations / Bugs:
 
-- Legacy VR controller support current DOES NOT WORK with this fork; needs code overhaul. I nevertheless display the option to swap `[XBOX <-> VR]` in the overlay for future use.
+- Legacy VR controller support currently DOES NOT WORK with this fork; needs code overhaul. I nevertheless display the option to swap `[XBOX <-> VR]` in the overlay for future use.
 - HUD Status Ring / Map / Text messages still behind foreground objects held by the player
-- Some cutscenes may show occasional double text in two layers; some action prompts (interact with object) may be absent, although the interaction still works.
+- Some cutscenes may show occasional double text in two layers; some action prompts (interact with object, e.g. (A) to use rope) may be absent, although the interaction still works.
 - Transfer from cinematic cutscene to player control may sometimes still have a weird perspective; this is due to free look with the HMD. To fix, rotate yourself via thumbstick.
 - DLSS 50% minimum, 33% Ultra Performance not available -> Ultra Performance and Performance both result in the same minimum 50% input scale; see [DLSS API docs](https://raw.githubusercontent.com/NVIDIA/DLSS/main/doc/DLSS_Programming_Guide_Release.pdf)
 
