@@ -106,6 +106,9 @@ namespace SonsVRMod
         // V137: sampled HDRP input, not targetTexture allocation or guessed DLSS percentage.
         private static float _nextStatsResolutionPoll;
         private static string _statsResolutionText = "DLSS: -- X --";
+        // V169B: system-local wall clock for F9 capture correlation; no input, focus or popup UI.
+        private static int _statsWallClockSecondV169B = -1;
+        private static string _statsWallClockV169B = "--:--:--";
         private static bool _panelOpen;
         private static int _selected;
         private static bool _dirty;
@@ -974,13 +977,21 @@ namespace SonsVRMod
                 }
                 catch { _statsResolutionText = "DLSS: -- X --"; }
             }
+            // V169B: cheap wall-clock read; allocate formatted text only when seconds change.
+            // Deliberately reuse the existing fourth line: do not resize or reposition V116 HUD.
+            DateTime wallClockNowV169B = DateTime.Now;
+            if (_statsWallClockSecondV169B != wallClockNowV169B.Second)
+            {
+                _statsWallClockSecondV169B = wallClockNowV169B.Second;
+                _statsWallClockV169B = wallClockNowV169B.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+            }
             float fps = 1000f / Mathf.Max(1f, _emaDtMs);
             string actualModeV112 = stereo.GetActualRenderModeV112();
             _statsText.text =
                 $"{actualModeV112}     ~{fps:F1} FPS     frame {_emaDtMs:F1} ms\n" +
                 $"SteamVR {_clientFrameMs:F1} ms     GPU {_gpuMs:F1} ms\n" +
                 $"dropped {_droppedFrames}     reproj 0x{_reprojectionFlags:X}\n" +
-                _statsResolutionText;
+                _statsResolutionText + "   LOCAL " + _statsWallClockV169B; // V169B: HH:mm:ss system local time
         }
 
         private static void EnsureStatsOverlay(StereoRender stereo)

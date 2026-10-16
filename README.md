@@ -20,8 +20,24 @@ Renders at a lower resolution, then AI upscales the result
 - NVIDIA OF (Optical Flow) (default on)\
 Makes it look like you have more FPS than you actually do
 
+### 🆕 Reporting Bugs
 
-## Fixes:
+1. Enable the **Frame-time overlay** in Overlay Settings (`Ctrl+Alt+F12` or Xbox: `[menu]+[view]`) to show the time.
+   ![Enable FPS overlay](howto/enable_frame_time.png)
+2. When a bug occurs, press **F9** and note the time (e.g. `09:00:14`).
+3. After quitting the game, run `bug_report_tool/COLLECT_SONSVR_LOGS.bat` and enter your game folder.
+4. Open a GitHub issue, DESCRIBE THE BUG, and attach the generated ZIP (and screenshots, if you have any).\
+**Privacy:** Logs may contain game activity and PC information. They are plain text; you can review and edit them before uploading. I mostly need what happened around the exact timestamp the bug occured, together with your description.
+
+## Fixes [16-OCT-26]:
+
+- [16-OCT-26] Fixed: BLUR on exit sometimes getting stuck and blurring all future menus
+- [16-OCT-26] Fixed: Tooltips in crafting tarp hidden kilometers away (at mouse pointer)
+- [16-OCT-26] Fixed: Required-items text sometimes rotated relative to camera view
+- [16-OCT-26] Improved instructions for launch in this README
+- [16-OCT-26] Added bug capturing tool
+
+## Fixes [initial commit]:
 
 - Eliminated scene rendering DURING loading -> slashed load time in half
 - Fixed HUD render issues / glitches with the Status Ring and Map
@@ -42,6 +58,8 @@ Makes it look like you have more FPS than you actually do
 ![Install Melon Loader](howto/install_melonloader.png)
 2. Then copy all the content of `game_files` to `steamapps/common/Sons Of The Forest`:\
 ![Where to copy](howto/where_to_copy.png)
+3. Launch the game from inside SteamVR:\
+![Launch Game from SteamVR](howto/launch_from_steamvr.png)
 
 - Overlay special VR settings, Xbox: `[menu]+[view]` or Keyboard: `Ctrl+Alt+F12`\
 ![Xbox config menu](howto/xbox_config_menu.png)\

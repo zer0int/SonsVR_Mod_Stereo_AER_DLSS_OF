@@ -23,7 +23,7 @@ set "BUNDLE=%UNITY_PROJECT%\THINGY_OUT\sonsvr_depththingy"
 set "RESOURCE=%ROOT%mod\Resources\sonsvr_depththingy"
 set "NATIVE_DLL=%ROOT%native_nvof\build\SonsVR_NvOF_V90.dll"
 set "OUT_DIR=%ROOT%OUTPUT"
-set "LABEL=community_v168g"
+set "LABEL=community_v169l"
 set "MANAGED_DLL=%ROOT%mod\builds\%LABEL%\SonsVR_Mod.dll"
 
 echo [1/3] Native NVIDIA optical-flow bridge...

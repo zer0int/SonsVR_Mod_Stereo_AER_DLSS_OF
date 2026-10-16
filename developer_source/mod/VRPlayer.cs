@@ -1,4 +1,4 @@
-﻿using Il2CppInterop.Runtime;
+using Il2CppInterop.Runtime;
 using Il2CppSystem.Collections.Generic;
 using MelonLoader;
 using System;
@@ -339,6 +339,14 @@ namespace SonsVRMod
         private bool _quickSelectItemInfoScaleLoggedV25 = false;
 
         private float _nextAdditionalHudResolveTimeV25 = 0f;
+
+        // V169C: expose read-only cached HUD references to the on-demand F9 diagnostic.
+        // These accessors never resolve a new HudGui, change UI state, or scan per frame.
+        internal RectTransform DiagnosticCookingRecipeViewV169C => _cookingRecipeInfoRtV24;
+        internal RectTransform DiagnosticTooltipViewV169C => _toolTipInfoRtV25;
+        internal RectTransform DiagnosticAvailableRecipesViewV169C => _availableRecipesRtV25;
+        internal RectTransform DiagnosticQuickSelectInfoViewV169C => _quickSelectItemInfoRtV25;
+
 
         private bool _canvasConvertedToWorldSpace = false;
         private bool canUpdate = false;
@@ -1437,6 +1445,9 @@ namespace SonsVRMod
             // are independent of the map/ring placement contract.
             UpdateCookingRecipeOverlayScaleV24();
             UpdateAdditionalHudInfoScalesV25();
+            // V169L: source-pixel deadzone/settling before V169D placement; required-item unfolding unchanged.
+            UiPlacementCorrectionsV169E.Tick(_screenSpaceCanvas,
+                StereoRender != null ? StereoRender.Head : null);
             UpdateModalDialogCanvasForVR();
             UpdateAddItemsToMatCanvasForVR();
             // Loading screen investigation set aside for now (per user request, to prioritize the
@@ -3471,8 +3482,11 @@ namespace SonsVRMod
 
                 if (_cookingRecipeInfoRtV24 == null) return;
 
+                // V169A: no-op at x1; native UI can legitimately animate its scale.
                 Vector3 desired = _cookingRecipeInfoBaseScaleV24 * CookingRecipeOverlayScaleMultiplier;
-                if ((_cookingRecipeInfoRtV24.localScale - desired).sqrMagnitude > 1e-10f)
+                if (Mathf.Abs(CookingRecipeOverlayScaleMultiplier - 1f) > 0.0001f &&
+                    _cookingRecipeInfoBaseScaleV24.sqrMagnitude >= 1e-8f &&
+                    (_cookingRecipeInfoRtV24.localScale - desired).sqrMagnitude > 1e-10f)
                     _cookingRecipeInfoRtV24.localScale = desired;
 
                 if (!_cookingRecipeScaleLoggedV24)
@@ -3681,6 +3695,11 @@ namespace SonsVRMod
         private void ApplyHudRectScaleV25(RectTransform rt, Vector3 baseScale, float multiplier, string label, ref bool logged)
         {
             if (rt == null) return;
+            // V169A: at x1, native pop-in animation / layout MUST own localScale.
+            // Previous code cached scale while hidden (often zero), then wrote it
+            // forever, making tooltips and item information invisible.
+            if (Mathf.Abs(multiplier - 1f) < 0.0001f) return;
+            if (baseScale.sqrMagnitude < 1e-8f) return; // avoid zero-scale poison
             Vector3 desired = baseScale * multiplier;
             if ((rt.localScale - desired).sqrMagnitude > 1e-10f) rt.localScale = desired;
             if (!logged)
@@ -4953,6 +4972,7 @@ namespace SonsVRMod
                     " timeScale=" + Time.timeScale.ToString("F3"));
             }
             _v145MenuOpen = false;
+            _v169TitleBlurCampaignPending = reason.IndexOf("SonsTitleScene", StringComparison.Ordinal) >= 0;
             _pauseMenuBlurVolume = null;
             _pauseMenuCanvasObject = null;
             _v145VolumeSearchAttempts = 0;
@@ -4960,33 +4980,34 @@ namespace SonsVRMod
             IsPauseMenuOpenConfirmed = false;
         }
 
+        // V169A: this is intentionally NOT a restore. We permanently suppress only the
+        // game's identified pause-menu blur Volume instance (never global post FX).
+        // Restoring the weight on menu close was reintroducing blur in unrelated save/title
+        // transition states. Unity owns its lifetime and destroys it on scene teardown.
         private void RestorePauseVolumeV145(string why)
         {
             if (_pauseMenuBlurSuppressed)
-            {
-                try
-                {
-                    if (_pauseMenuBlurVolume != null)
-                    {
-                        _pauseMenuBlurVolume.weight = _pauseMenuBlurVolumeSavedWeight;
-                        ManualPauseFpsTraceV144.RecordV145Event("VOLUME_RESTORED",
-                            "reason=" + why + " weight=" + _pauseMenuBlurVolumeSavedWeight.ToString("F3"));
-                    }
-                }
-                catch (Exception e)
-                {
-                    MelonLogger.Warning("[V145 PauseVolume] restore failed at " + why + ": " + e.Message);
-                }
-            }
+                ManualPauseFpsTraceV144.RecordV145Event("BLUR_LEFT_OFF",
+                    "reason=" + why + " volume=" +
+                    (_pauseMenuBlurVolume != null ? _pauseMenuBlurVolume.name : "destroyed"));
             _pauseMenuBlurSuppressed = false;
         }
 
+        // V169A: one additional bounded search on entering the title, where the
+        // native pause flag is false even though a transitioning blur can linger.
+        private bool _v169TitleBlurCampaignPending;
+
         private void UpdatePauseMenuBlurSuppression(bool menuIsReallyOpen)
         {
-            // OFF is an explicit no-mutation setting, but always restore a weight
-            // that this mod previously changed if the menu closes.
+            // V169A never restores a blur weight on menu close; this makes a
+            // false flag opt-out only before the Volume has first been suppressed.
             float now = Time.unscaledTime;
-            if (!menuIsReallyOpen)
+            // V169A: keep existing bounded V145 lookup. On title entry a separate
+            // one-shot campaign can run without treating the title as paused.
+            bool titleBlurCampaign = _v169TitleBlurCampaignPending &&
+                UsedSceneName == "SonsTitleScene";
+            bool shouldScan = menuIsReallyOpen || titleBlurCampaign;
+            if (!shouldScan)
             {
                 if (_v145MenuOpen || _pauseMenuBlurSuppressed)
                 {
@@ -5011,7 +5032,15 @@ namespace SonsVRMod
                 ManualPauseFpsTraceV144.RecordV145Event("MENU_OPENED",
                     "timeScale=" + Time.timeScale.ToString("F3") + " boundedScans=" + V145MaxVolumeSearchesPerOpen);
             }
-            if (!SuppressPauseMenuBlur || _pauseMenuBlurSuppressed) return;
+            // V169A: the native system can reassign the weight on transitions.
+            // Reassert on the ONE already-cached target, with no extra search.
+            if (_pauseMenuBlurSuppressed)
+            {
+                if (_pauseMenuBlurVolume != null && _pauseMenuBlurVolume.weight > 0f)
+                    _pauseMenuBlurVolume.weight = 0f;
+                return;
+            }
+            if (!SuppressPauseMenuBlur) return;
 
             // Never search when the menu is closed. Never loop forever when the
             // pause-only Volume does not exist (e.g. loading an unpausable intro).
@@ -5048,6 +5077,9 @@ namespace SonsVRMod
                     " found=" + (_pauseMenuBlurVolume != null));
             }
 
+            if (titleBlurCampaign && now > _v145VolumeSearchDeadline)
+                _v169TitleBlurCampaignPending = false;
+
             if (_pauseMenuBlurVolume != null && !_pauseMenuBlurSuppressed)
             {
                 try
@@ -5055,9 +5087,10 @@ namespace SonsVRMod
                     _pauseMenuBlurVolumeSavedWeight = _pauseMenuBlurVolume.weight;
                     _pauseMenuBlurVolume.weight = 0f;
                     _pauseMenuBlurSuppressed = true;
-                    ManualPauseFpsTraceV144.RecordV145Event("VOLUME_ZEROED",
+                    _v169TitleBlurCampaignPending = false;
+                    ManualPauseFpsTraceV144.RecordV145Event("VOLUME_PERMANENTLY_ZEROED_V169A",
                         "before=" + _pauseMenuBlurVolumeSavedWeight.ToString("F3"));
-                    MelonLogger.Msg("[V145 PauseVolume] Suppressed the native pause blur; no global search while in gameplay.");
+                    MelonLogger.Msg("[V169A PauseVolume] Blur OFF for this Volume lifetime; never restore on menu close.");
                 }
                 catch (Exception e)
                 {

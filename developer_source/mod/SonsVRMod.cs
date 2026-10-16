@@ -1,4 +1,4 @@
-﻿using MelonLoader;
+using MelonLoader;
 using System.Runtime.InteropServices;
 using Il2CppInterop.Runtime.Injection;
 using System.Security;
@@ -328,6 +328,10 @@ namespace SonsVRMod
         /// </summary>
         public override void OnUpdate()
         {
+            // V169L: one diagnostic toggle, F7, changes native tooltip pixel stabilization ONLY.
+            // No camera, renderer or shader toggles remain; F9 is the sole snapshot key.
+            UiPlacementCorrectionsV169E.TickLatchAB();
+            DiagnosticSnapshotV169.Tick();
             ManualPauseFpsTraceV144.Tick(); // V144: record native Start/B and before/after state; never inject input
             
             NativeDlssContractTraceV127.Tick(); // V127 passive-only native DLSS contract telemetry

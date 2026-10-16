@@ -785,6 +785,10 @@
         <Compile Include="ManualPauseFpsTraceV144.cs" />
         <Compile Include="BookletPassiveTraceV151.cs" />
         <Compile Include="BookletGazeV161.cs" />
+        <!-- V169B: explicit compile item required; EnableDefaultCompileItems is false. -->
+        <Compile Include="DiagnosticSnapshotV169.cs" />
+    <Compile Include="BlackBackdropProbeV169G.cs" />
+    <Compile Include="UiPlacementCorrectionsV169E.cs" />
 		<Compile Include="VRUiToolkit.cs" />
 	</ItemGroup>
 
