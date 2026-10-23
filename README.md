@@ -25,9 +25,14 @@ Makes it look like you have more FPS than you actually do
 1. Enable the **Frame-time overlay** in Overlay Settings (`Ctrl+Alt+F12` or Xbox: `[menu]+[view]`) to show the time.
    ![Enable FPS overlay](howto/enable_frame_time.png)
 2. When a bug occurs, press **F9** and note the time (e.g. `09:00:14`).
-3. After quitting the game, run `bug_report_tool/COLLECT_SONSVR_LOGS.bat` and enter your game folder.
+3. After quitting the game, run `bug_report_tool/COLLECT_SONSVR_LOGS_PRIVATE.bat` for system info removed version (enough for mod-specific bugs like 'can't close menu') or `bug_report_tool/COLLECT_SONSVR_LOGS.bat` (for potentially driver-related crashes; includes GPU info, drivers, paths, etc.) and enter your game folder.
 4. Open a GitHub issue, DESCRIBE THE BUG, and attach the generated ZIP (and screenshots, if you have any).\
 **Privacy:** Logs may contain game activity and PC information. They are plain text; you can review and edit them before uploading. I mostly need what happened around the exact timestamp the bug occured, together with your description.
+
+## Fixes [23-OCT-26]:
+- [23-OCT-26] Fixed: Multiplayer failure to disengage loading screen after game ready.
+- [23-OCT-26] Fixed: Misc issues in Multiplayer: Volume search, menu blur.
+- [23-OCT-26] Added privacy-preserving stripped version of bug report tool.
 
 ## Fixes [16-OCT-26]:
 

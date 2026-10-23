@@ -778,13 +778,15 @@ namespace SonsVRMod
             bool returningToKnownGameplayCamV147 = returningFromTarpV147 &&
                 incomingCameraV147 == _tarpPreviousGameplayCameraV147;
             string newMenuSceneV145 = activeSceneAndCam.scene.name;
-            // V158: arm ONLY on return from established gameplay into a new
-            // title camera. Do not touch the successful fresh-boot title pose,
-            // inventory/tarp transitions, or the cinematic camera handoffs.
+            // V170: a multiplayer MainCameraFP lives in DontDestroyOnLoad and never
+            // trips the older SonsMain/AER-ready gate. Track actual gameplay camera
+            // adoption separately so the one-shot V159 title heading fix still runs.
+            // Do not alter fresh-boot title, tarp, or cinematic transitions.
             bool returningToTitleV158 = newMenuSceneV145 == "SonsTitleScene" &&
                 UsedSceneName != "SonsTitleScene" &&
                 incomingCameraV147 != null && incomingCameraV147.name == "Main Camera" &&
-                global::SonsVRMod.StereoRender.AerGameplayReadyForActivation;
+                (global::SonsVRMod.StereoRender.AerGameplayReadyForActivation ||
+                 _v170GameplayCameraSeenSinceTitle);
             // Camera changes between inventory and MainCameraFP are NOT native
             // pause exits. Only context changes into/out of title/gameplay qualify.
             if (!string.Equals(UsedSceneName, newMenuSceneV145, StringComparison.Ordinal) &&
@@ -798,6 +800,9 @@ namespace SonsVRMod
                 BeginPreGameplayLoadingEpochV146("camera-scene:" + UsedSceneName + "->" + newMenuSceneV145);
             UsedSceneName = newMenuSceneV145;
             UsedCamera = activeSceneAndCam.camera;
+            if (UsedSceneName == "SonsTitleScene" && UsedCamera != null &&
+                UsedCamera.name == "Main Camera")
+                _v170GameplayCameraSeenSinceTitle = false;
 
             // V159: the title's WorldSpace canvases take a ONE-TIME world-space heading
             // snapshot when converted. V158 delayed the yaw correction until *after*
@@ -1029,25 +1034,40 @@ namespace SonsVRMod
                     {
                         kh.LocalPlayer = LocalPlayer;
                     }
-
-                    // V43: this is the ONLY gameplay-readiness gate for deferred AER. Do not arm
-                    // on the title camera, loading cameras, InventoryCamera, or merely because a
-                    // scene happens to exist. The good V40C control proved this exact full-stereo
-                    // path survives loading; AER is allowed only once the real gameplay camera and
-                    // LocalPlayer are both present in SonsMain. StereoRender waits additionally for
-                    // a successful MainCameraFP HDRP-data copy, then flips AER after that frame's EOF.
-                    if (global::SonsVRMod.StereoRender.AerDeferredGameplayActivationEnabled &&
-                        !global::SonsVRMod.StereoRender.AerGameplayReadyForActivation &&
-                        string.Equals(UsedSceneName, "SonsMain", StringComparison.Ordinal) &&
-                        UsedCamera != null && UsedCamera.name.Equals("MainCameraFP"))
-                    {
-                        global::SonsVRMod.StereoRender.AerGameplayReadyForActivation = true;
-                        MelonLogger.Warning("[VRPlayer][AER V43] gameplay gate ARMED: SonsMain + MainCameraFP + LocalPlayer confirmed. Staying full stereo until MainCameraFP HDRP copy succeeds; AER activation will then occur only after EOF.");
-                    }
+                    if (UsedCamera.name == "MainCameraFP")
+                        _v170GameplayCameraSeenSinceTitle = true;
+                    TryArmDeferredGameplayV170("camera-adoption");
                 }
 
                 canUpdate = true;
             }
+        }
+
+        // V170: keep the V43 single-player gate unchanged. In multiplayer Unity
+        // owns MainCameraFP from DontDestroyOnLoad, not SonsMain. Do not activate
+        // deferred AER until the V146 *physical spawn* checks release the cover;
+        // a cutscene or an under-map transitional player must not arm AER early.
+        private bool _v170GameplayCameraSeenSinceTitle;
+        private bool _v170MultiplayerSpawnConfirmed;
+
+        private void TryArmDeferredGameplayV170(string reason)
+        {
+            if (!global::SonsVRMod.StereoRender.AerDeferredGameplayActivationEnabled ||
+                global::SonsVRMod.StereoRender.AerGameplayReadyForActivation ||
+                UsedCamera == null || UsedCamera.name != "MainCameraFP" || LocalPlayer == null)
+                return;
+
+            bool singlePlayer = string.Equals(UsedSceneName, "SonsMain", StringComparison.Ordinal);
+            bool multiplayer = string.Equals(UsedSceneName, "DontDestroyOnLoad", StringComparison.Ordinal) &&
+                _v170MultiplayerSpawnConfirmed && !_v146LoadingEpochActive;
+            if (!singlePlayer && !multiplayer) return;
+
+            global::SonsVRMod.StereoRender.AerGameplayReadyForActivation = true;
+            MelonLogger.Warning("[VRPlayer][AER V170] gameplay gate ARMED: " +
+                "owner=" + UsedSceneName + " camera=MainCameraFP LocalPlayer=True" +
+                " multiplayerSpawnVerified=" + _v170MultiplayerSpawnConfirmed +
+                " reason=" + reason +
+                "; staying stereo until MainCameraFP HDRP copy and EOF.");
         }
 
         /// <summary>
@@ -5054,14 +5074,18 @@ namespace SonsVRMod
                 long startTicks = System.Diagnostics.Stopwatch.GetTimestamp();
                 try
                 {
-                    var volumes = UnityEngine.Object.FindObjectsOfType<UnityEngine.Rendering.Volume>();
-                    foreach (var v in volumes)
+                    // V170: F9 proved this Volume exists in multiplayer even while
+                    // FindObjectsOfType<Volume>() returned nothing six times. Resolve
+                    // the observed native child directly; Transform.Find includes
+                    // inactive children and avoids ~90 ms full-scene scans.
+                    Transform nativePause = _pauseMenuCanvasObject;
+                    if (nativePause == null && _screenSpaceCanvas != null)
+                        nativePause = _screenSpaceCanvas.transform.Find("PauseMenu");
+                    if (nativePause != null)
                     {
-                        if (v != null && v.name == "PauseMenuPostProcessingVolume")
-                        {
-                            _pauseMenuBlurVolume = v;
-                            break;
-                        }
+                        Transform blurChild = nativePause.Find("PauseMenuPostProcessingVolume");
+                        if (blurChild != null)
+                            _pauseMenuBlurVolume = blurChild.GetComponent<UnityEngine.Rendering.Volume>();
                     }
                 }
                 catch (Exception e)
@@ -11402,6 +11426,7 @@ namespace SonsVRMod
         private void BeginPreGameplayLoadingEpochV146(string reason)
         {
             if (_v146LoadingEpochActive) return;
+            _v170MultiplayerSpawnConfirmed = false;
             _v146LoadingEpochActive = true;
             _v146LoadingEpochStart = Time.realtimeSinceStartup;
             _v146NativeGameplayStableSince = -1f;
@@ -11426,6 +11451,9 @@ namespace SonsVRMod
 
         private void ClearPreGameplayLoadingEpochV146(string reason)
         {
+            // V170: clear even if the epoch was already released; title scene
+            // notifications otherwise leave a stale multiplayer-ready latch.
+            _v170MultiplayerSpawnConfirmed = false;
             if (!_v146LoadingEpochActive) return;
             _v146LoadingEpochActive = false;
             _v146NativeGameplayStableSince = -1f;
@@ -11754,8 +11782,10 @@ namespace SonsVRMod
             // effects, including the known construction-ghost rendering dependency.
             // Only replace the three HDRP fields altered by ApplyPreGameplayBlackEyeV114;
             // leave the eye camera's own AA/DLSS/frame settings/culling logic untouched.
+            // V170: multiplayer MainCameraFP is owned by DontDestroyOnLoad.
+            // It requires the same native HDRP restoration as single-player.
             if (UsedCamera != null && UsedCamera.name == "MainCameraFP" &&
-                UsedSceneName == "SonsMain")
+                LocalPlayer != null)
             {
                 try
                 {
@@ -11843,7 +11873,12 @@ namespace SonsVRMod
                     "; epoch still active");
             }
 
-            bool nativeGameplay = UsedSceneName == "SonsMain" &&
+            // V170: in multiplayer, VRSystem reports the camera object's owner
+            // scene (DontDestroyOnLoad), while the active world scene can remain
+            // BlankScene even when the local player is fully interactive.
+            bool gameplayCameraOwner = UsedSceneName == "SonsMain" ||
+                UsedSceneName == "DontDestroyOnLoad";
+            bool nativeGameplay = gameplayCameraOwner &&
                 UsedCamera != null && UsedCamera.name == "MainCameraFP" &&
                 LocalPlayer != null && (!introCutscene || _v155IntroLatched);
             if (_v146LoadingEpochActive && nativeGameplay)
@@ -11881,7 +11916,8 @@ namespace SonsVRMod
                 {
                     float elapsed = Time.realtimeSinceStartup - _v146LoadingEpochStart;
                     _v146LoadingEpochActive = false;
-                    MelonLogger.Warning("[VRPlayer][V146 LoadingCover] RELEASE after " +
+                    _v170MultiplayerSpawnConfirmed = UsedSceneName == "DontDestroyOnLoad";
+                    MelonLogger.Warning("[VRPlayer][V170 LoadingCover] RELEASE after " +
                         elapsed.ToString("F2") + "s; trigger=" +
                         (verified ? "grounded-spawn" : motionReady ? "avatar-locomotion" :
                          physicallyReady ? "stable-avatar-floor" : "airborne/water-fallback") +
@@ -11912,7 +11948,23 @@ namespace SonsVRMod
                 _v154ObservedAvatarTravel = 0f;
                 _v154PlayerLocomotionSeen = false;
                 _v154StableFloorProbes = 0;
+                // V170: a missing camera/player gate used to fail silently forever.
+                if (Time.realtimeSinceStartup - _v146LastTransitionLog >= 3f)
+                {
+                    _v146LastTransitionLog = Time.realtimeSinceStartup;
+                    MelonLogger.Msg("[VRPlayer][V170 LoadingCover] WAIT_CONTEXT" +
+                        " activeScene=" + scene + " owner=" + UsedSceneName +
+                        " camera=" + (UsedCamera != null ? UsedCamera.name : "null") +
+                        " localPlayer=" + (LocalPlayer != null) +
+                        " intro=" + introCutscene +
+                        " epochSeconds=" + (Time.realtimeSinceStartup - _v146LoadingEpochStart).ToString("F2"));
+                }
             }
+
+            // V170: SetSceneAndCamera may have adopted MainCameraFP tens of seconds
+            // earlier. Arm deferred AER on the very frame multiplayer spawn is
+            // verified, before the BlankScene fallback decides whether to mask.
+            TryArmDeferredGameplayV170("spawn-gate-update");
 
             // V114 old behavior remains the safety net if an epoch wasn't observed. The
             // sticky V146 epoch survives additive scene changes and stale AER-ready flags.
